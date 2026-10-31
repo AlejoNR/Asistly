@@ -6,11 +6,14 @@ import 'firebase_options.dart';
 import 'services/auth_repository.dart';
 import 'services/course_repository.dart';
 import 'theme/app_theme.dart';
+import 'models/course.dart';
 import 'viewmodels/check_email_viewmodel.dart';
+import 'viewmodels/course_created_viewmodel.dart';
 import 'viewmodels/demo_viewmodel.dart';
 import 'viewmodels/forgot_password_viewmodel.dart';
 import 'viewmodels/login_viewmodel.dart';
 import 'viewmodels/main_viewmodel.dart';
+import 'viewmodels/new_course_viewmodel.dart';
 import 'viewmodels/register_viewmodel.dart';
 import 'viewmodels/role_viewmodel.dart';
 import 'viewmodels/splash_viewmodel.dart';
@@ -23,8 +26,11 @@ import 'views/register_view.dart';
 import 'views/role_view.dart';
 import 'views/splash_view.dart';
 import 'views/student/student_main_view.dart';
+import 'views/teacher/course_created_view.dart';
+import 'views/teacher/new_course_view.dart';
 import 'views/teacher/teacher_main_view.dart';
 import 'views/verify_email_view.dart';
+import 'views/widgets/coming_soon.dart';
 
 void main() async {
   // Firebase debe iniciarse antes de mostrar la app.
@@ -64,6 +70,14 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       initialRoute: initialRoute,
+      // Mientras se construyen las pantallas, las rutas que aún no existen
+      // muestran "en construcción" en vez de cerrar la app con un error.
+      onUnknownRoute: (settings) => MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(),
+          body: const ComingSoon(icon: Icons.construction, title: 'Próximamente'),
+        ),
+      ),
       routes: {
         'splash': (context) => ChangeNotifierProvider(
           create: (context) => SplashViewModel(_repo(context)),
@@ -101,6 +115,20 @@ class MyApp extends StatelessWidget {
           create: (context) => MainViewModel(_repo(context)),
           child: const TeacherMainView(),
         ),
+        // ---------- Docente ----------
+        'new_course': (context) => ChangeNotifierProvider(
+              create: (context) => NewCourseViewModel(_repo(context), _courses(context)),
+              child: const NewCourseView(),
+            ),
+        'course_created': (context) {
+          // El curso recién creado llega como argumento de la ruta. Se lee aquí,
+          // antes del provider: dentro de "create" Flutter no permite usar ModalRoute.of.
+          final course = ModalRoute.of(context)!.settings.arguments as Course;
+          return ChangeNotifierProvider(
+            create: (context) => CourseCreatedViewModel(course),
+            child: const CourseCreatedView(),
+          );
+        },
         'student_home': (context) => ChangeNotifierProvider(
           create: (context) => MainViewModel(_repo(context)),
           child: const StudentMainView(),
@@ -109,8 +137,13 @@ class MyApp extends StatelessWidget {
     );
   }
 
-  /// Busca el repositorio registrado en [AppState].
+  /// Busca el repositorio de cuentas registrado en [AppState].
   AuthRepository _repo(BuildContext context) {
     return Provider.of<AuthRepository>(context, listen: false);
+  }
+
+  /// Busca el repositorio de cursos registrado en [AppState].
+  CourseRepository _courses(BuildContext context) {
+    return Provider.of<CourseRepository>(context, listen: false);
   }
 }

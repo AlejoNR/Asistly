@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../services/auth_repository.dart';
+import '../../services/course_repository.dart';
 import '../../viewmodels/main_viewmodel.dart';
+import '../../viewmodels/teacher_home_viewmodel.dart';
 import '../widgets/app_bottom_nav.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/coming_soon.dart';
 import '../widgets/temporary_profile.dart';
+import 'teacher_home_view.dart';
 
 /// Pantalla principal del docente con su barra inferior: Inicio, Cursos, Perfil.
 class TeacherMainView extends StatelessWidget {
@@ -34,7 +38,14 @@ class TeacherMainView extends StatelessWidget {
       body: IndexedStack(
         index: vm.currentTab,
         children: [
-          const ComingSoon(icon: Icons.home_outlined, title: 'Inicio del docente'),
+          // Cada pestaña tiene su propio ViewModel.
+          ChangeNotifierProvider(
+            create: (context) => TeacherHomeViewModel(
+              Provider.of<AuthRepository>(context, listen: false),
+              Provider.of<CourseRepository>(context, listen: false),
+            ),
+            child: const TeacherHomeView(),
+          ),
           const ComingSoon(icon: Icons.menu_book_outlined, title: 'Mis cursos'),
           TemporaryProfile(user: vm.user, onSignOut: () => _signOut(context, vm)),
         ],

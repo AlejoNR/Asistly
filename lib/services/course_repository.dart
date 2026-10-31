@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import '../models/attendance_record.dart';
 import '../models/class_session.dart';
 import '../models/course.dart';
@@ -79,6 +81,53 @@ class CourseRepository {
   Future<List<Course>> getTeacherCourses() async {
     await _fakeDelay();
     return List.of(_courses);
+  }
+
+  /// Crea un curso y le genera su código de inscripción.
+  Future<Course> createCourse({
+    required String name,
+    required String group,
+    required String semester,
+    required List<int> days,
+    required String startTime,
+    required String endTime,
+    required String room,
+    required String teacherName,
+  }) async {
+    await _fakeDelay();
+    final course = Course(
+      id: 'c${DateTime.now().millisecondsSinceEpoch}',
+      name: name,
+      group: group,
+      semester: semester,
+      days: days,
+      startTime: startTime,
+      endTime: endTime,
+      room: room,
+      enrollCode: _generateCode(name, group),
+      teacherName: teacherName,
+    );
+    _courses.insert(0, course); // El nuevo aparece de primero en la lista.
+    return course;
+  }
+
+  /// Código tipo "PM2-4X7K": iniciales del nombre + número del grupo + 4 caracteres al azar.
+  /// Se evitan letras que se confunden al leerlas (O/0, I/1).
+  String _generateCode(String name, String group) {
+    final words = name.trim().split(' ');
+    var prefix = '';
+    for (final word in words) {
+      if (word.length > 2 && prefix.length < 2) prefix += word[0].toUpperCase();
+    }
+    final groupNumber = group.replaceAll(RegExp(r'[^0-9]'), '');
+
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final random = Random();
+    var suffix = '';
+    for (var i = 0; i < 4; i++) {
+      suffix += chars[random.nextInt(chars.length)];
+    }
+    return '$prefix$groupNumber-$suffix';
   }
 
   Future<Course?> getCourse(String courseId) async {
