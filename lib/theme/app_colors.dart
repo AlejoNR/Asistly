@@ -32,4 +32,14 @@ class AppColors {
   static const error = Color(0xFFBA1A1A);
   static const errorContainer = Color(0xFFFFDAD6);
   static const onErrorContainer = Color(0xFF93000A);
+
+  // Estados de asistencia (DESIGN.md de Stitch).
+  static const present = Color(0xFF059669); // texto "Presente"
+  static const presentContainer = Color(0xFFECFDF5);
+  static const presentDot = Color(0xFF10B981);
+  static const absent = Color(0xFFD64545); // rojo: solo errores y ausencias
+  static const absentContainer = Color(0xFFFEF2F2);
+
+  // Sombra suave de las tarjetas (azul oscuro muy transparente).
+  static const cardShadow = Color(0x0F0F2557);
 }

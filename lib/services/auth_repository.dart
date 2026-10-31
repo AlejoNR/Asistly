@@ -34,8 +34,14 @@ class AuthRepository {
 
   String get currentEmail => _authService.currentUser?.email ?? '';
 
+  /// Cada rol tiene su propio Home: 'teacher_home' o 'student_home'.
+  String get homeRoute {
+    if (user?.role == UserRole.teacher) return 'teacher_home';
+    return 'student_home';
+  }
+
   /// Al abrir la app: decide a qué pantalla ir según la sesión guardada.
-  /// Devuelve el nombre de la ruta: 'role', 'verify_email' o 'home'.
+  /// Devuelve el nombre de la ruta: 'role', 'verify_email' o el Home del rol.
   Future<String> restoreSession() async {
     final firebaseUser = _authService.currentUser;
     if (firebaseUser == null) return 'role';
@@ -49,7 +55,7 @@ class AuthRepository {
       user = profile;
 
       final verified = await _authService.reloadAndCheckVerified();
-      if (verified) return 'home';
+      if (verified) return homeRoute;
       return 'verify_email';
     } catch (e) {
       // Sin internet u otro problema: se pide iniciar sesión otra vez.
@@ -58,7 +64,7 @@ class AuthRepository {
   }
 
   /// Inicia sesión y revisa que el rol y el celular coincidan.
-  /// Devuelve la ruta a la que hay que ir: 'home' o 'verify_email'.
+  /// Devuelve la ruta a la que hay que ir: el Home del rol o 'verify_email'.
   Future<String> login(String email, String password, UserRole role) async {
     try {
       final firebaseUser = await _authService.signIn(_clean(email), password);
@@ -84,7 +90,7 @@ class AuthRepository {
       }
 
       user = profile;
-      if (firebaseUser.emailVerified) return 'home';
+      if (firebaseUser.emailVerified) return homeRoute;
       return 'verify_email';
     } catch (e) {
       throw _toAuthException(e);
@@ -156,6 +162,29 @@ class AuthRepository {
       await _emailService.sendPasswordReset(_clean(email));
     } catch (e) {
       throw _toAuthException(e);
+    }
+  }
+
+  /// SOLO PARA EL MODO DEMO (lib/main_demo.dart): entra con un usuario de
+  /// ejemplo sin pasar por Firebase, para revisar las pantallas sin iniciar sesión.
+  void startDemo(UserRole role) {
+    if (role == UserRole.teacher) {
+      user = const AppUser(
+        uid: 'demo-docente',
+        fullName: 'Carlos Ramírez',
+        code: 'DOC-0142',
+        email: 'carlos.ramirez@udla.edu.co',
+        role: UserRole.teacher,
+      );
+    } else {
+      user = const AppUser(
+        uid: 'demo-estudiante',
+        fullName: 'Aldo Encarnación',
+        code: '2024-1156',
+        email: 'ald.encarnacion@udla.edu.co',
+        role: UserRole.student,
+        deviceId: 'demo',
+      );
     }
   }
 

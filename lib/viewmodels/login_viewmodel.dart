@@ -23,7 +23,7 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Devuelve la ruta a la que hay que ir ('home' o 'verify_email'),
+  /// Devuelve la ruta a la que hay que ir (el Home del rol o 'verify_email'),
   /// o null si falló (el mensaje queda en [error]).
   Future<String?> login(String email, String password, UserRole role) async {
     isLoading = true;

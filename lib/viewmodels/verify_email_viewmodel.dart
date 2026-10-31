@@ -32,6 +32,7 @@ class VerifyEmailViewModel extends ChangeNotifier {
   bool get canResend => secondsLeft == 0;
   String get countdown => '00:${secondsLeft.toString().padLeft(2, '0')}';
   String get maskedEmail => maskEmail(_repo.currentEmail);
+  String get homeRoute => _repo.homeRoute;
 
   /// Botón "Ya verifiqué mi correo". Devuelve un mensaje para mostrar, o null.
   Future<String?> checkNow() async {

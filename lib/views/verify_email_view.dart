@@ -13,7 +13,8 @@ class VerifyEmailView extends StatelessWidget {
   const VerifyEmailView({super.key});
 
   void _goHome(BuildContext context) {
-    Navigator.pushNamedAndRemoveUntil(context, 'home', (r) => false);
+    final vm = Provider.of<VerifyEmailViewModel>(context, listen: false);
+    Navigator.pushNamedAndRemoveUntil(context, vm.homeRoute, (r) => false);
   }
 
   Future<void> _checkNow(BuildContext context, VerifyEmailViewModel vm) async {
