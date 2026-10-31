@@ -1,4 +1,4 @@
-abstract final class AppConfig {
+class AppConfig {
   static const universityName = 'Universidad de la Amazonia';
 
   /// Dominios de correo permitidos para registrarse e iniciar sesión.

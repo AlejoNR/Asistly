@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Paleta tomada del design system de Stitch (Asistly).
-abstract final class AppColors {
+class AppColors {
   static const primary = Color(0xFF00266F);
   static const primaryContainer = Color(0xFF1A3D8F);
   static const primaryFixed = Color(0xFFDBE1FF);

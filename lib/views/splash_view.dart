@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/config/app_config.dart';
-import '../../core/routes/app_routes.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
-import '../../data/repositories/auth_repository.dart';
-import '../../viewmodels/splash_viewmodel.dart';
-import '../widgets/asistly_logo.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_theme.dart';
+import '../util/app_config.dart';
+import '../viewmodels/splash_viewmodel.dart';
+import 'widgets/asistly_logo.dart';
 
+/// Pantalla de carga: muestra el logo mientras revisa si hay una sesión guardada.
+/// Es StatefulWidget solo por las animaciones; la lógica está en [SplashViewModel].
 class SplashView extends StatefulWidget {
   const SplashView({super.key});
 
@@ -20,26 +20,24 @@ class SplashView extends StatefulWidget {
 }
 
 class _SplashViewState extends State<SplashView> with TickerProviderStateMixin {
-  late final _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))
-    ..repeat();
-  late final _progress =
-      AnimationController(vsync: this, duration: SplashViewModel.minDuration)..forward();
+  late AnimationController _pulse;
+  late AnimationController _progress;
 
   @override
   void initState() {
     super.initState();
+    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+    _pulse.repeat();
+    _progress = AnimationController(vsync: this, duration: SplashViewModel.minDuration);
+    _progress.forward();
     _start();
   }
 
   Future<void> _start() async {
-    final destination = await context.read<SplashViewModel>().resolveStart();
+    final vm = Provider.of<SplashViewModel>(context, listen: false);
+    final route = await vm.start();
     if (!mounted) return;
-    final route = switch (destination) {
-      AuthDestination.home => AppRoutes.home,
-      AuthDestination.verifyEmail => AppRoutes.verifyEmail,
-      AuthDestination.roleSelection => AppRoutes.roleSelection,
-    };
-    Navigator.of(context).pushReplacementNamed(route);
+    Navigator.pushReplacementNamed(context, route);
   }
 
   @override
@@ -179,7 +177,7 @@ class _ProgressBar extends StatelessWidget {
         height: 4,
         child: AnimatedBuilder(
           animation: progress,
-          builder: (_, _) => LinearProgressIndicator(
+          builder: (context, child) => LinearProgressIndicator(
             value: Curves.easeInOut.transform(progress.value),
             backgroundColor: Colors.white.withValues(alpha: 0.2),
             color: AppColors.tertiaryFixedDim,

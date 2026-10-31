@@ -3,35 +3,36 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
-/// Escala tipográfica del design system (Inter).
-abstract final class AppText {
-  static TextStyle get displayLg => GoogleFonts.inter(
+/// Estilos de texto del diseño (fuente Inter).
+/// Son static final para crearlos una sola vez y no en cada redibujo.
+class AppText {
+  static final TextStyle displayLg = GoogleFonts.inter(
       fontSize: 40, height: 48 / 40, letterSpacing: -0.8, fontWeight: FontWeight.w700);
-  static TextStyle get headlineLg => GoogleFonts.inter(
+  static final TextStyle headlineLg = GoogleFonts.inter(
       fontSize: 30, height: 36 / 30, letterSpacing: -0.45, fontWeight: FontWeight.w700);
-  static TextStyle get headlineMd => GoogleFonts.inter(
+  static final TextStyle headlineMd = GoogleFonts.inter(
       fontSize: 24, height: 32 / 24, letterSpacing: -0.24, fontWeight: FontWeight.w600);
-  static TextStyle get headlineSm => GoogleFonts.inter(
+  static final TextStyle headlineSm = GoogleFonts.inter(
       fontSize: 20, height: 26 / 20, letterSpacing: -0.1, fontWeight: FontWeight.w600);
-  static TextStyle get titleLg =>
+  static final TextStyle titleLg =
       GoogleFonts.inter(fontSize: 18, height: 24 / 18, fontWeight: FontWeight.w600);
-  static TextStyle get titleMd =>
+  static final TextStyle titleMd =
       GoogleFonts.inter(fontSize: 16, height: 22 / 16, fontWeight: FontWeight.w600);
-  static TextStyle get bodyLg =>
+  static final TextStyle bodyLg =
       GoogleFonts.inter(fontSize: 16, height: 24 / 16, fontWeight: FontWeight.w400);
-  static TextStyle get bodyMd =>
+  static final TextStyle bodyMd =
       GoogleFonts.inter(fontSize: 14, height: 20 / 14, fontWeight: FontWeight.w400);
-  static TextStyle get bodySm =>
+  static final TextStyle bodySm =
       GoogleFonts.inter(fontSize: 12, height: 16 / 12, fontWeight: FontWeight.w400);
-  static TextStyle get labelLg => GoogleFonts.inter(
+  static final TextStyle labelLg = GoogleFonts.inter(
       fontSize: 14, height: 20 / 14, letterSpacing: 0.14, fontWeight: FontWeight.w600);
-  static TextStyle get labelMd => GoogleFonts.inter(
+  static final TextStyle labelMd = GoogleFonts.inter(
       fontSize: 12, height: 16 / 12, letterSpacing: 0.24, fontWeight: FontWeight.w500);
-  static TextStyle get labelSm => GoogleFonts.inter(
+  static final TextStyle labelSm = GoogleFonts.inter(
       fontSize: 11, height: 14 / 11, letterSpacing: 0.22, fontWeight: FontWeight.w500);
 }
 
-abstract final class AppTheme {
+class AppTheme {
   static ThemeData get light {
     const scheme = ColorScheme.light(
       primary: AppColors.primary,

@@ -1,8 +1,8 @@
-import '../config/app_config.dart';
+import 'app_config.dart';
 
 /// Validadores de formularios. Devuelven `null` si el valor es válido
 /// o el mensaje de error a mostrar.
-abstract final class Validators {
+class Validators {
   static final _emailRegex = RegExp(r'^[\w.+-]+@[\w-]+(\.[\w-]+)+$');
 
   static String? required(String? value, {String field = 'Este campo'}) {
@@ -60,4 +60,11 @@ abstract final class Validators {
     }
     return null;
   }
+}
+
+/// Oculta parte del correo para mostrarlo en pantalla: usuario@udla.edu.co -> u***@udla.edu.co
+String maskEmail(String email) {
+  final at = email.indexOf('@');
+  if (at <= 0) return email;
+  return '${email[0]}***${email.substring(at)}';
 }

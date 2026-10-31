@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
-import '../../viewmodels/forgot_password_viewmodel.dart';
-import '../widgets/common.dart';
-import '../widgets/primary_button.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_theme.dart';
+import '../viewmodels/check_email_viewmodel.dart';
+import 'widgets/common.dart';
+import 'widgets/primary_button.dart';
 
-/// "Revisa tu correo": confirmación tras pedir el enlace de recuperación.
+/// "Revisa tu correo": confirmación después de pedir el enlace de recuperación.
+/// Recibe el correo como argumento de la ruta, para poder reenviarlo.
 class CheckEmailView extends StatelessWidget {
   const CheckEmailView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<ForgotPasswordViewModel>();
+    final vm = Provider.of<CheckEmailViewModel>(context);
+    final email = ModalRoute.of(context)!.settings.arguments as String? ?? '';
     final muted = AppText.labelSm.copyWith(color: AppColors.outline);
-
     return Scaffold(
       body: SafeArea(
         child: LayoutBuilder(
@@ -70,13 +71,13 @@ class CheckEmailView extends StatelessWidget {
                         PrimaryButton.dark(
                           label: 'Volver a iniciar sesión',
                           leadingIcon: Icons.login,
-                          onPressed: () => Navigator.of(context).pop(),
+                          onPressed: () => Navigator.pop(context),
                         ),
                         const SizedBox(height: 16),
                         TextLink(
                           label: vm.resendLabel,
                           icon: Icons.sync,
-                          onTap: vm.canResend ? vm.resend : null,
+                          onTap: vm.canResend ? () => vm.resend(email) : null,
                         ),
                         if (vm.secondsLeft > 0)
                           Text.rich(
@@ -145,9 +146,15 @@ class _MailBadge extends StatefulWidget {
 }
 
 class _MailBadgeState extends State<_MailBadge> with SingleTickerProviderStateMixin {
-  late final _controller =
-      AnimationController(vsync: this, duration: const Duration(seconds: 2))
-        ..repeat(reverse: true);
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // Animación suave que se repite: el círculo de fondo aparece y se desvanece.
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 2));
+    _controller.repeat(reverse: true);
+  }
 
   @override
   void dispose() {

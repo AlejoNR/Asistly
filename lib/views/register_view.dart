@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/routes/app_routes.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
-import '../../core/utils/validators.dart';
-import '../../data/models/user_role.dart';
-import '../../viewmodels/register_viewmodel.dart';
-import '../widgets/app_text_field.dart';
-import '../widgets/common.dart';
-import '../widgets/primary_button.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_theme.dart';
+import '../util/validators.dart';
+import '../viewmodels/register_viewmodel.dart';
+import 'widgets/app_text_field.dart';
+import 'widgets/common.dart';
+import 'widgets/primary_button.dart';
 
+// Estilo que comparten todos los campos de esta pantalla.
+const _labelColor = AppColors.onSurface;
+const _iconColor = AppColors.secondary;
+const _radius = 16.0;
+
+/// Crear cuenta de estudiante. La cuenta queda vinculada a este celular.
+/// Es StatefulWidget solo por el formulario; el estado está en [RegisterViewModel].
 class RegisterView extends StatefulWidget {
   const RegisterView({super.key});
 
@@ -28,18 +33,19 @@ class _RegisterViewState extends State<RegisterView> {
 
   @override
   void dispose() {
-    for (final c in [_name, _code, _email, _password, _confirm]) {
-      c.dispose();
-    }
+    _name.dispose();
+    _code.dispose();
+    _email.dispose();
+    _password.dispose();
+    _confirm.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
-    FocusScope.of(context).unfocus();
-    final vm = context.read<RegisterViewModel>();
-    final formOk = _formKey.currentState!.validate();
-    if (!formOk) return;
+    FocusScope.of(context).unfocus(); // Cierra el teclado.
+    if (!_formKey.currentState!.validate()) return;
 
+    final vm = Provider.of<RegisterViewModel>(context, listen: false);
     final ok = await vm.register(
       fullName: _name.text,
       code: _code.text,
@@ -47,17 +53,12 @@ class _RegisterViewState extends State<RegisterView> {
       password: _password.text,
     );
     if (!mounted || !ok) return;
-    Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.verifyEmail, (_) => false);
+    Navigator.pushNamedAndRemoveUntil(context, 'verify_email', (r) => false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<RegisterViewModel>();
-    const fieldStyle = (
-      labelColor: AppColors.onSurface,
-      iconColor: AppColors.secondary,
-      radius: 16.0,
-    );
+    final vm = Provider.of<RegisterViewModel>(context);
 
     return Scaffold(
       body: SafeArea(
@@ -77,16 +78,12 @@ class _RegisterViewState extends State<RegisterView> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    vm.role == UserRole.student
-                        ? 'Ingresa tus datos institucionales para crear tu cuenta.'
-                        : 'Ingresa tus datos institucionales para crear tu cuenta de docente.',
+                    'Ingresa tus datos institucionales para crear tu cuenta.',
                     style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant),
                   ),
                   const SizedBox(height: 20),
-                  if (vm.bindsDevice) ...[
-                    const _DeviceNotice(),
-                    const SizedBox(height: 24),
-                  ],
+                  const _DeviceNotice(),
+                  const SizedBox(height: 24),
                   AppTextField(
                     controller: _name,
                     label: 'Nombre completo',
@@ -95,20 +92,20 @@ class _RegisterViewState extends State<RegisterView> {
                     textCapitalization: TextCapitalization.words,
                     autofillHints: const [AutofillHints.name],
                     validator: Validators.fullName,
-                    labelColor: fieldStyle.labelColor,
-                    iconColor: fieldStyle.iconColor,
-                    radius: fieldStyle.radius,
+                    labelColor: _labelColor,
+                    iconColor: _iconColor,
+                    radius: _radius,
                   ),
                   const SizedBox(height: 16),
                   AppTextField(
                     controller: _code,
-                    label: vm.codeLabel,
+                    label: 'Código estudiantil',
                     hint: 'Ej. 2024-10842',
                     icon: Icons.badge_outlined,
                     validator: Validators.institutionalCode,
-                    labelColor: fieldStyle.labelColor,
-                    iconColor: fieldStyle.iconColor,
-                    radius: fieldStyle.radius,
+                    labelColor: _labelColor,
+                    iconColor: _iconColor,
+                    radius: _radius,
                   ),
                   const SizedBox(height: 16),
                   AppTextField(
@@ -119,9 +116,9 @@ class _RegisterViewState extends State<RegisterView> {
                     keyboardType: TextInputType.emailAddress,
                     autofillHints: const [AutofillHints.email],
                     validator: Validators.institutionalEmail,
-                    labelColor: fieldStyle.labelColor,
-                    iconColor: fieldStyle.iconColor,
-                    radius: fieldStyle.radius,
+                    labelColor: _labelColor,
+                    iconColor: _iconColor,
+                    radius: _radius,
                   ),
                   const SizedBox(height: 16),
                   AppTextField(
@@ -133,9 +130,9 @@ class _RegisterViewState extends State<RegisterView> {
                     onToggleObscure: vm.togglePasswordVisibility,
                     autofillHints: const [AutofillHints.newPassword],
                     validator: Validators.newPassword,
-                    labelColor: fieldStyle.labelColor,
-                    iconColor: fieldStyle.iconColor,
-                    radius: fieldStyle.radius,
+                    labelColor: _labelColor,
+                    iconColor: _iconColor,
+                    radius: _radius,
                   ),
                   const SizedBox(height: 16),
                   AppTextField(
@@ -147,9 +144,9 @@ class _RegisterViewState extends State<RegisterView> {
                     onToggleObscure: vm.toggleConfirmVisibility,
                     textInputAction: TextInputAction.done,
                     validator: (v) => Validators.confirmPassword(v, _password.text),
-                    labelColor: fieldStyle.labelColor,
-                    iconColor: fieldStyle.iconColor,
-                    radius: fieldStyle.radius,
+                    labelColor: _labelColor,
+                    iconColor: _iconColor,
+                    radius: _radius,
                   ),
                   const SizedBox(height: 12),
                   _TermsCheckbox(

@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+
 import 'package:provider/provider.dart';
 
-import '../../core/routes/app_routes.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
-import '../../data/models/user_role.dart';
-import '../../viewmodels/role_selection_viewmodel.dart';
-import '../widgets/primary_button.dart';
+import '../models/user_role.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_theme.dart';
+import '../viewmodels/role_viewmodel.dart';
+import 'widgets/primary_button.dart';
 
-class RoleSelectionView extends StatelessWidget {
-  const RoleSelectionView({super.key});
+/// "¿Cómo vas a usar Asistly?": elegir docente o estudiante.
+class RoleView extends StatelessWidget {
+  const RoleView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<RoleSelectionViewModel>();
+    final vm = Provider.of<RoleViewModel>(context);
 
     return Scaffold(
       body: SafeArea(
@@ -71,10 +72,8 @@ class RoleSelectionView extends StatelessWidget {
               const SizedBox(height: 48),
               PrimaryButton(
                 label: 'Continuar',
-                onPressed: () => Navigator.of(context).pushNamed(
-                  AppRoutes.login,
-                  arguments: vm.selected,
-                ),
+                // El rol elegido viaja a la pantalla de login como argumento.
+                onPressed: () => Navigator.pushNamed(context, 'login', arguments: vm.selected),
               ),
             ],
           ),

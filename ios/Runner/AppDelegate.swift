@@ -12,17 +12,5 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-
-    // identifierForVendor: estable mientras la app esté instalada.
-    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "AsistlyDevice") {
-      let channel = FlutterMethodChannel(name: "asistly/device", binaryMessenger: registrar.messenger())
-      channel.setMethodCallHandler { call, result in
-        if call.method == "getDeviceId" {
-          result(UIDevice.current.identifierForVendor?.uuidString)
-        } else {
-          result(FlutterMethodNotImplemented)
-        }
-      }
-    }
   }
 }

@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/routes/app_routes.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
-import '../../core/utils/validators.dart';
-import '../../viewmodels/forgot_password_viewmodel.dart';
-import '../widgets/app_text_field.dart';
-import '../widgets/common.dart';
-import '../widgets/primary_button.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_theme.dart';
+import '../util/validators.dart';
+import '../viewmodels/forgot_password_viewmodel.dart';
+import 'widgets/app_text_field.dart';
+import 'widgets/common.dart';
+import 'widgets/primary_button.dart';
 
+/// "Recuperar contraseña": pide el correo y envía el enlace para cambiarla.
+/// Es StatefulWidget solo por el formulario; el estado está en [ForgotPasswordViewModel].
 class ForgotPasswordView extends StatefulWidget {
   const ForgotPasswordView({super.key});
 
@@ -31,16 +32,16 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
 
-    final vm = context.read<ForgotPasswordViewModel>();
-    final ok = await vm.sendReset(_email.text);
+    final email = _email.text.trim();
+    final vm = Provider.of<ForgotPasswordViewModel>(context, listen: false);
+    final ok = await vm.sendReset(email);
     if (!mounted || !ok) return;
-    Navigator.of(context).pushReplacementNamed(AppRoutes.checkEmail, arguments: vm.email);
+    Navigator.pushReplacementNamed(context, 'check_email', arguments: email);
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<ForgotPasswordViewModel>();
-
+    final vm = Provider.of<ForgotPasswordViewModel>(context);
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -114,7 +115,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                     TextLink(
                       label: 'Volver a iniciar sesión',
                       icon: Icons.arrow_back,
-                      onTap: () => Navigator.of(context).pop(),
+                      onTap: () => Navigator.pop(context),
                     ),
                   ],
                 ),

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/routes/app_routes.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
-import '../../viewmodels/home_viewmodel.dart';
-import '../widgets/primary_button.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_theme.dart';
+import '../viewmodels/home_viewmodel.dart';
+import 'widgets/primary_button.dart';
 
 /// Home provisional hasta construir los Home de docente y estudiante.
 class HomeView extends StatelessWidget {
@@ -13,7 +12,7 @@ class HomeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<HomeViewModel>();
+    final vm = Provider.of<HomeViewModel>(context);
     final user = vm.user;
 
     return Scaffold(
@@ -39,8 +38,7 @@ class HomeView extends StatelessWidget {
                 onPressed: () async {
                   await vm.signOut();
                   if (!context.mounted) return;
-                  Navigator.of(context)
-                      .pushNamedAndRemoveUntil(AppRoutes.roleSelection, (_) => false);
+                  Navigator.pushNamedAndRemoveUntil(context, 'role', (r) => false);
                 },
               ),
             ],

@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/routes/app_routes.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
-import '../../core/utils/validators.dart';
-import '../../data/models/user_role.dart';
-import '../../data/repositories/auth_repository.dart';
-import '../../viewmodels/login_viewmodel.dart';
-import '../widgets/app_text_field.dart';
-import '../widgets/common.dart';
-import '../widgets/primary_button.dart';
+import '../models/user_role.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_theme.dart';
+import '../util/validators.dart';
+import '../viewmodels/login_viewmodel.dart';
+import 'widgets/app_text_field.dart';
+import 'widgets/common.dart';
+import 'widgets/primary_button.dart';
 
+/// Iniciar sesión. Recibe el rol elegido como argumento de la ruta.
+/// Es StatefulWidget solo por el formulario; el estado está en [LoginViewModel].
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
 
@@ -31,23 +31,22 @@ class _LoginViewState extends State<LoginView> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    FocusScope.of(context).unfocus();
+  Future<void> _submit(UserRole role) async {
+    FocusScope.of(context).unfocus(); // Cierra el teclado.
     if (!_formKey.currentState!.validate()) return;
 
-    final vm = context.read<LoginViewModel>();
-    final destination = await vm.login(_email.text, _password.text);
-    if (!mounted || destination == null) return;
-
-    final route =
-        destination == AuthDestination.home ? AppRoutes.home : AppRoutes.verifyEmail;
-    Navigator.of(context).pushNamedAndRemoveUntil(route, (_) => false);
+    final vm = Provider.of<LoginViewModel>(context, listen: false);
+    final route = await vm.login(_email.text, _password.text, role);
+    if (!mounted || route == null) return;
+    // Se borra el historial para que "atrás" no vuelva al login.
+    Navigator.pushNamedAndRemoveUntil(context, route, (r) => false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<LoginViewModel>();
-    final isStudent = vm.role == UserRole.student;
+    final vm = Provider.of<LoginViewModel>(context);
+    final role = ModalRoute.of(context)!.settings.arguments as UserRole? ?? UserRole.student;
+    final isStudent = role == UserRole.student;
 
     return Scaffold(
       body: SafeArea(
@@ -63,7 +62,7 @@ class _LoginViewState extends State<LoginView> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const CircleBackButton(),
-                      _RoleChip(role: vm.role),
+                      _RoleChip(role: role),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -90,7 +89,7 @@ class _LoginViewState extends State<LoginView> {
                     keyboardType: TextInputType.emailAddress,
                     autofillHints: const [AutofillHints.email],
                     validator: Validators.institutionalEmail,
-                    onChanged: (_) => vm.clearError(),
+                    onChanged: (value) => vm.clearError(),
                   ),
                   const SizedBox(height: 16),
                   AppTextField(
@@ -104,8 +103,8 @@ class _LoginViewState extends State<LoginView> {
                     textInputAction: TextInputAction.done,
                     autofillHints: const [AutofillHints.password],
                     validator: Validators.loginPassword,
-                    onChanged: (_) => vm.clearError(),
-                    onFieldSubmitted: (_) => _submit(),
+                    onChanged: (value) => vm.clearError(),
+                    onFieldSubmitted: (value) => _submit(role),
                   ),
                   const SizedBox(height: 4),
                   Align(
@@ -114,7 +113,7 @@ class _LoginViewState extends State<LoginView> {
                       label: '¿Olvidaste tu contraseña?',
                       onTap: vm.isLoading
                           ? null
-                          : () => Navigator.of(context).pushNamed(AppRoutes.forgotPassword),
+                          : () => Navigator.pushNamed(context, 'forgot_password'),
                     ),
                   ),
                   if (vm.error != null) ...[
@@ -126,29 +125,35 @@ class _LoginViewState extends State<LoginView> {
                     label: 'Ingresar',
                     trailingIcon: Icons.login,
                     isLoading: vm.isLoading,
-                    onPressed: _submit,
+                    onPressed: () => _submit(role),
                   ),
                   const SizedBox(height: 40),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '¿No tienes cuenta?',
-                        style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant),
-                      ),
-                      TextLink(
-                        label: 'Regístrate',
-                        style: AppText.labelLg.copyWith(
-                          color: AppColors.primaryContainer,
-                          fontWeight: FontWeight.w700,
+                  // Solo los estudiantes se registran en la app.
+                  // Las cuentas de docente las crea el administrador.
+                  if (isStudent)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '¿No tienes cuenta?',
+                          style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant),
                         ),
-                        onTap: vm.isLoading
-                            ? null
-                            : () => Navigator.of(context)
-                                .pushNamed(AppRoutes.register, arguments: vm.role),
-                      ),
-                    ],
-                  ),
+                        TextLink(
+                          label: 'Regístrate',
+                          style: AppText.labelLg.copyWith(
+                            color: AppColors.primaryContainer,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          onTap: vm.isLoading ? null : () => Navigator.pushNamed(context, 'register'),
+                        ),
+                      ],
+                    )
+                  else
+                    Text(
+                      '¿No tienes cuenta? Solicítala al administrador de tu facultad.',
+                      textAlign: TextAlign.center,
+                      style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant),
+                    ),
                 ],
               ),
             ),

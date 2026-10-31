@@ -1,60 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/routes/app_routes.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
-import '../../viewmodels/email_verification_viewmodel.dart';
-import '../widgets/common.dart';
-import '../widgets/primary_button.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_theme.dart';
+import '../viewmodels/verify_email_viewmodel.dart';
+import 'widgets/common.dart';
+import 'widgets/primary_button.dart';
 
-class EmailVerificationView extends StatefulWidget {
-  const EmailVerificationView({super.key});
+/// "Verifica tu correo": espera a que el estudiante toque el enlace del correo.
+/// Los temporizadores y la revisión están en [VerifyEmailViewModel].
+class VerifyEmailView extends StatelessWidget {
+  const VerifyEmailView({super.key});
 
-  @override
-  State<EmailVerificationView> createState() => _EmailVerificationViewState();
-}
-
-class _EmailVerificationViewState extends State<EmailVerificationView> {
-  late final EmailVerificationViewModel _vm;
-  bool _navigated = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _vm = context.read<EmailVerificationViewModel>()..addListener(_onVmChanged);
+  void _goHome(BuildContext context) {
+    Navigator.pushNamedAndRemoveUntil(context, 'home', (r) => false);
   }
 
-  /// Efectos de una sola vez: navegar al verificar y mostrar mensajes.
-  void _onVmChanged() {
-    if (!mounted) return;
-    if (_vm.isVerified && !_navigated) {
-      _navigated = true;
-      Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.home, (_) => false);
-      return;
-    }
-    final message = _vm.message;
-    if (message != null) {
-      _vm.consumeMessage();
+  Future<void> _checkNow(BuildContext context, VerifyEmailViewModel vm) async {
+    final message = await vm.checkNow();
+    if (!context.mounted) return;
+    if (vm.isVerified) {
+      _goHome(context);
+    } else if (message != null) {
       showAppSnackBar(context, message);
     }
   }
 
-  Future<void> _useAnotherAccount() async {
-    await _vm.signOut();
-    if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.roleSelection, (_) => false);
+  Future<void> _resend(BuildContext context, VerifyEmailViewModel vm) async {
+    final message = await vm.resend();
+    if (context.mounted) showAppSnackBar(context, message);
   }
 
-  @override
-  void dispose() {
-    _vm.removeListener(_onVmChanged);
-    super.dispose();
+  Future<void> _useAnotherAccount(BuildContext context, VerifyEmailViewModel vm) async {
+    await vm.signOut();
+    if (!context.mounted) return;
+    Navigator.pushNamedAndRemoveUntil(context, 'role', (r) => false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<EmailVerificationViewModel>();
+    final vm = Provider.of<VerifyEmailViewModel>(context);
+
+    // Si la revisión automática detectó la verificación, se va al Home
+    // justo después de dibujar esta pantalla (no se puede navegar en medio del build).
+    if (vm.isVerified) {
+      WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+        if (context.mounted && ModalRoute.of(context)!.isCurrent) _goHome(context);
+      });
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -120,20 +113,33 @@ class _EmailVerificationViewState extends State<EmailVerificationView> {
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: AppColors.onSurfaceVariant),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '¿No lo ves? Revisa la carpeta de spam o correo no deseado.',
+                      style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
               PrimaryButton(
                 label: 'Ya verifiqué mi correo',
                 height: 56,
                 radius: 16,
                 isLoading: vm.isChecking,
-                onPressed: vm.checkNow,
+                onPressed: () => _checkNow(context, vm),
               ),
               const SizedBox(height: 20),
               if (vm.canResend)
                 TextLink(
                   label: 'Reenviar correo',
                   icon: Icons.sync,
-                  onTap: vm.resend,
+                  onTap: () => _resend(context, vm),
                 )
               else
                 Row(
@@ -147,7 +153,7 @@ class _EmailVerificationViewState extends State<EmailVerificationView> {
                           text: 'Reenviar correo · disponible en ',
                           children: [
                             TextSpan(
-                              text: vm.countdownLabel,
+                              text: vm.countdown,
                               style: const TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w600,
@@ -164,7 +170,7 @@ class _EmailVerificationViewState extends State<EmailVerificationView> {
               TextLink(
                 label: 'Usar otra cuenta',
                 style: AppText.labelMd.copyWith(color: AppColors.outline),
-                onTap: _useAnotherAccount,
+                onTap: () => _useAnotherAccount(context, vm),
               ),
             ],
           ),

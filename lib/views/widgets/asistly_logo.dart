@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
+import '../../theme/app_colors.dart';
 
 /// Glifo de Asistly: una "A" que emite ondas de señal (BLE).
 /// Traducción directa del SVG del splash de Stitch (viewBox 100x100).
@@ -18,7 +18,7 @@ class AsistlyGlyph extends StatelessWidget {
         ? CustomPaint(size: Size.square(size), painter: _GlyphPainter(0))
         : AnimatedBuilder(
             animation: pulse!,
-            builder: (_, _) =>
+            builder: (context, child) =>
                 CustomPaint(size: Size.square(size), painter: _GlyphPainter(pulse!.value)),
           );
     return painter;
