@@ -583,7 +583,7 @@ class _StartClassButton extends StatelessWidget {
           height: 60,
           child: FilledButton(
             onPressed: enabled
-                ? () => Navigator.pushNamed(context, 'active_session', arguments: course.id)
+                ? () => Navigator.pushNamed(context, 'active_session', arguments: course.id).then((value) => vm.load())
                 : null,
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.tertiaryFixedDim,

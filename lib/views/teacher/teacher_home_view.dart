@@ -30,7 +30,7 @@ class TeacherHomeView extends StatelessWidget {
       ));
     } else {
       for (final course in vm.courses) {
-        children.add(_TeacherCourseCard(course: course));
+        children.add(_TeacherCourseCard(course: course, onReturn: vm.loadCourses));
         children.add(const SizedBox(height: 16));
       }
     }
@@ -159,7 +159,8 @@ class _SectionHeader extends StatelessWidget {
 /// Tarjeta de un curso del docente. Franja amarilla y chip si la clase está en curso.
 class _TeacherCourseCard extends StatelessWidget {
   final Course course;
-  const _TeacherCourseCard({required this.course});
+  final VoidCallback onReturn; // Recarga los cursos al volver
+  const _TeacherCourseCard({required this.course, required this.onReturn});
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +168,7 @@ class _TeacherCourseCard extends StatelessWidget {
 
     return AppCard(
       accentColor: isLive ? AppColors.tertiaryFixedDim : AppColors.primary,
-      onTap: () => Navigator.pushNamed(context, 'course_detail', arguments: course.id),
+      onTap: () => Navigator.pushNamed(context, 'course_detail', arguments: course.id).then((value) => onReturn()),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -199,9 +200,9 @@ class _TeacherCourseCard extends StatelessWidget {
               // Si hay clase en curso se abre la sesión; si no, el detalle para iniciarla.
               onPressed: () {
                 if (isLive) {
-                  Navigator.pushNamed(context, 'active_session', arguments: course.id);
+                  Navigator.pushNamed(context, 'active_session', arguments: course.id).then((value) => onReturn());
                 } else {
-                  Navigator.pushNamed(context, 'course_detail', arguments: course.id);
+                  Navigator.pushNamed(context, 'course_detail', arguments: course.id).then((value) => onReturn());
                 }
               },
               style: FilledButton.styleFrom(

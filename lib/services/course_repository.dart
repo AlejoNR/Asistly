@@ -257,12 +257,30 @@ class CourseRepository {
     return added;
   }
 
+  // Clases ya dictadas de cada curso. Se generan una vez y luego se guardan aquí,
+  // para que las clases que cierre el docente se agreguen a la lista.
+  final Map<String, List<ClassSession>> _sessionsByCourse = {};
+
   /// Clases ya dictadas, de la más reciente a la más antigua.
   Future<List<ClassSession>> getCourseSessions(String courseId) async {
     await _fakeDelay();
+    if (!_sessionsByCourse.containsKey(courseId)) {
+      _sessionsByCourse[courseId] = _generateSessions(courseId);
+    }
+    return List.of(_sessionsByCourse[courseId]!);
+  }
+
+  /// Agrega una clase recién cerrada al principio del historial.
+  Future<void> addClosedSession(ClassSession session) async {
+    final list = await getCourseSessions(session.courseId);
+    list.insert(0, session);
+    _sessionsByCourse[session.courseId] = list;
+  }
+
+  /// 14 clases de ejemplo, dos por semana hacia atrás desde el 21 de septiembre.
+  List<ClassSession> _generateSessions(String courseId) {
     final sessions = <ClassSession>[];
-    // 14 clases de ejemplo, dos por semana hacia atrás desde el 21 de septiembre.
-    var date = DateTime(2026, 9, 21);
+    var date = DateTime(2026, 9, 21, 8, 0);
     for (var number = 14; number >= 1; number--) {
       final present = 26 + (number * 7) % 6; // Números variados pero creíbles
       sessions.add(ClassSession(
