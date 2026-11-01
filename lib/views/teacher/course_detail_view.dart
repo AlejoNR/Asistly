@@ -37,9 +37,9 @@ class CourseDetailView extends StatelessWidget {
             const SizedBox(height: 12),
             _SummaryCard(course: course, comment: vm.attendanceComment),
             const SizedBox(height: 12),
-            _QuickActions(course: course),
+            _QuickActions(course: course, onReturn: vm.load),
             const SizedBox(height: 16),
-            _OfficialListCard(course: course),
+            _OfficialListCard(course: course, onReturn: vm.load),
             const SizedBox(height: 16),
             _SessionSettingsCard(vm: vm, course: course),
             const SizedBox(height: 20),
@@ -264,7 +264,8 @@ class _SummaryCard extends StatelessWidget {
 /// Accesos rápidos: Estudiantes (con pendientes), Reporte y Código.
 class _QuickActions extends StatelessWidget {
   final Course course;
-  const _QuickActions({required this.course});
+  final VoidCallback onReturn; // Recarga el detalle al volver
+  const _QuickActions({required this.course, required this.onReturn});
 
   @override
   Widget build(BuildContext context) {
@@ -276,7 +277,7 @@ class _QuickActions extends StatelessWidget {
             title: 'Estudiantes',
             subtitle: course.pendingCount > 0 ? '${course.pendingCount} pendientes' : 'Ver lista',
             badge: course.pendingCount,
-            onTap: () => Navigator.pushNamed(context, 'course_students', arguments: course.id),
+            onTap: () => Navigator.pushNamed(context, 'course_students', arguments: course.id).then((value) => onReturn()),
           ),
         ),
         const SizedBox(width: 8),
@@ -371,7 +372,8 @@ class _QuickAction extends StatelessWidget {
 /// Tarjeta "Lista oficial": invita a importarla o muestra que ya está cargada.
 class _OfficialListCard extends StatelessWidget {
   final Course course;
-  const _OfficialListCard({required this.course});
+  final VoidCallback onReturn;
+  const _OfficialListCard({required this.course, required this.onReturn});
 
   @override
   Widget build(BuildContext context) {
@@ -428,7 +430,7 @@ class _OfficialListCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           OutlinedButton.icon(
-            onPressed: () => Navigator.pushNamed(context, 'import_list', arguments: course.id),
+            onPressed: () => Navigator.pushNamed(context, 'import_list', arguments: course.id).then((value) => onReturn()),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.primary,
               minimumSize: const Size.fromHeight(48),

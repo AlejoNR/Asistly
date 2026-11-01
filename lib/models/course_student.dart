@@ -25,6 +25,19 @@ class CourseStudent {
     this.absences = 0,
   });
 
+  /// Copia del estudiante con otro estado (por ejemplo, al aceptarlo o retirarlo).
+  CourseStudent copyWith({EnrollmentStatus? status}) {
+    return CourseStudent(
+      uid: uid,
+      name: name,
+      code: code,
+      email: email,
+      status: status ?? this.status,
+      attendancePercent: attendancePercent,
+      absences: absences,
+    );
+  }
+
   /// Iniciales para el avatar: "Sofía Morales" -> "SM".
   String get initials {
     final parts = name.trim().split(' ');

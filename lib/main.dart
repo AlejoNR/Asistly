@@ -10,8 +10,10 @@ import 'models/course.dart';
 import 'viewmodels/check_email_viewmodel.dart';
 import 'viewmodels/course_created_viewmodel.dart';
 import 'viewmodels/course_detail_viewmodel.dart';
+import 'viewmodels/course_students_viewmodel.dart';
 import 'viewmodels/demo_viewmodel.dart';
 import 'viewmodels/forgot_password_viewmodel.dart';
+import 'viewmodels/import_list_viewmodel.dart';
 import 'viewmodels/login_viewmodel.dart';
 import 'viewmodels/main_viewmodel.dart';
 import 'viewmodels/new_course_viewmodel.dart';
@@ -29,6 +31,9 @@ import 'views/splash_view.dart';
 import 'views/student/student_main_view.dart';
 import 'views/teacher/course_created_view.dart';
 import 'views/teacher/course_detail_view.dart';
+import 'views/teacher/course_students_view.dart';
+import 'views/teacher/import_list_view.dart';
+import 'views/teacher/pending_requests_view.dart';
 import 'views/teacher/new_course_view.dart';
 import 'views/teacher/teacher_main_view.dart';
 import 'views/verify_email_view.dart';
@@ -138,8 +143,28 @@ class MyApp extends StatelessWidget {
             child: const CourseDetailView(),
           );
         },
-        'student_home': (context) => ChangeNotifierProvider(
-          create: (context) => MainViewModel(_repo(context)),
+        'import_list': (context) {
+          final courseId = ModalRoute.of(context)!.settings.arguments as String;
+          return ChangeNotifierProvider(
+            create: (context) => ImportListViewModel(_courses(context), courseId),
+            child: const ImportListView(),
+          );
+        },
+        'course_students': (context) {
+          final courseId = ModalRoute.of(context)!.settings.arguments as String;
+          return ChangeNotifierProvider(
+            create: (context) => CourseStudentsViewModel(_courses(context), courseId),
+            child: const CourseStudentsView(),
+          );
+        },
+        'pending_requests': (context) {
+          final courseId = ModalRoute.of(context)!.settings.arguments as String;
+          return ChangeNotifierProvider(
+            create: (context) => CourseStudentsViewModel(_courses(context), courseId),
+            child: const PendingRequestsView(),
+          );
+        },
+        'student_home': (context) => ChangeNotifierProvider(          create: (context) => MainViewModel(_repo(context)),
           child: const StudentMainView(),
         ),
       },

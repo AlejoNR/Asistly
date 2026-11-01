@@ -4,6 +4,7 @@ import '../models/attendance_record.dart';
 import '../models/class_session.dart';
 import '../models/course.dart';
 import '../models/course_student.dart';
+import '../models/official_list.dart';
 
 /// Repositorio de cursos, sesiones y asistencias (parte del Modelo en MVVM).
 ///
@@ -64,16 +65,21 @@ class CourseRepository {
     ),
   ];
 
-  final List<CourseStudent> _students = const [
-    CourseStudent(uid: 's1', name: 'Sofía Morales', code: '2021-0492', email: 'sofia.morales@udla.edu.co', status: EnrollmentStatus.enrolled, attendancePercent: 96, absences: 1),
-    CourseStudent(uid: 's2', name: 'Carlos Mendoza', code: '2020-8114', email: 'carlos.mendoza@udla.edu.co', status: EnrollmentStatus.enrolled, attendancePercent: 92, absences: 2),
-    CourseStudent(uid: 's3', name: 'Andrea Rivas', code: '2021-1053', email: 'andrea.rivas@udla.edu.co', status: EnrollmentStatus.enrolled, attendancePercent: 88, absences: 3),
-    CourseStudent(uid: 's4', name: 'Daniel Ortega', code: '2019-3420', email: 'daniel.ortega@udla.edu.co', status: EnrollmentStatus.enrolled, attendancePercent: 71, absences: 6),
-    CourseStudent(uid: 's5', name: 'Valeria Gómez', code: '2022-0187', email: 'valeria.gomez@udla.edu.co', status: EnrollmentStatus.enrolled, attendancePercent: 64, absences: 8),
-    CourseStudent(uid: 's6', name: 'Julián Castro', code: '2022-0311', email: 'julian.castro@udla.edu.co', status: EnrollmentStatus.pending),
-    CourseStudent(uid: 's7', name: 'Mariana López', code: '2022-0455', email: 'mariana.lopez@udla.edu.co', status: EnrollmentStatus.pending),
-    CourseStudent(uid: 's8', name: 'Felipe Rojas', code: '2021-0778', email: 'felipe.rojas@udla.edu.co', status: EnrollmentStatus.notJoined),
-    CourseStudent(uid: 's9', name: 'Laura Peña', code: '2020-0921', email: 'laura.pena@udla.edu.co', status: EnrollmentStatus.withdrawn, attendancePercent: 50, absences: 5),
+  // No es "const" porque la lista cambia: se aceptan, rechazan y retiran estudiantes.
+  final List<CourseStudent> _students = [
+    const CourseStudent(uid: 's1', name: 'Sofía Morales Delgado', code: '2024-0842', email: 'sofia.morales@udla.edu.co', status: EnrollmentStatus.enrolled, attendancePercent: 96, absences: 1),
+    const CourseStudent(uid: 's2', name: 'Carlos Mendoza Rivera', code: '2024-1103', email: 'carlos.mendoza@udla.edu.co', status: EnrollmentStatus.enrolled, attendancePercent: 89, absences: 3),
+    const CourseStudent(uid: 's3', name: 'Alejandro Romero Cruz', code: '2024-0519', email: 'alejandro.romero@udla.edu.co', status: EnrollmentStatus.enrolled, attendancePercent: 68, absences: 8),
+    const CourseStudent(uid: 's4', name: 'Mariana Vargas Ortiz', code: '2024-0988', email: 'mariana.vargas@udla.edu.co', status: EnrollmentStatus.enrolled, attendancePercent: 94, absences: 2),
+    const CourseStudent(uid: 's5', name: 'Diego Castro Peña', code: '2024-1340', email: 'diego.castro@udla.edu.co', status: EnrollmentStatus.enrolled, attendancePercent: 91, absences: 2),
+    const CourseStudent(uid: 's6', name: 'Lucía Orozco Torres', code: '2024-0231', email: 'lucia.orozco@udla.edu.co', status: EnrollmentStatus.enrolled, attendancePercent: 62, absences: 9),
+    const CourseStudent(uid: 's7', name: 'Gabriel Toledo Reyes', code: '2024-1774', email: 'gabriel.toledo@udla.edu.co', status: EnrollmentStatus.enrolled, attendancePercent: 85, absences: 4),
+    const CourseStudent(uid: 's8', name: 'Valeria Navarro Benítez', code: '2024-0412', email: 'valeria.navarro@udla.edu.co', status: EnrollmentStatus.enrolled, attendancePercent: 98, absences: 0),
+    const CourseStudent(uid: 's9', name: 'Julián Torres', code: '2023-0917', email: 'julian.torres@udla.edu.co', status: EnrollmentStatus.pending),
+    const CourseStudent(uid: 's10', name: 'Camila Rojas', code: '2024-1203', email: 'camila.rojas@udla.edu.co', status: EnrollmentStatus.pending),
+    const CourseStudent(uid: 's11', name: 'Felipe Rojas Mora', code: '2024-0778', email: 'felipe.rojas@udla.edu.co', status: EnrollmentStatus.notJoined),
+    const CourseStudent(uid: 's12', name: 'Paula Gómez Ríos', code: '2024-0655', email: 'paula.gomez@udla.edu.co', status: EnrollmentStatus.notJoined),
+    const CourseStudent(uid: 's13', name: 'Laura Peña Silva', code: '2023-0921', email: 'laura.pena@udla.edu.co', status: EnrollmentStatus.withdrawn, attendancePercent: 50, absences: 5),
   ];
 
   // ---------- Docente ----------
@@ -148,6 +154,107 @@ class CourseRepository {
   Future<List<CourseStudent>> getCourseStudents(String courseId) async {
     await _fakeDelay();
     return List.of(_students);
+  }
+
+  /// Cambia el estado de un estudiante (aceptar = inscrito, retirar = retirado).
+  Future<void> setStudentStatus(String courseId, String uid, EnrollmentStatus status) async {
+    await _fakeDelay();
+    for (var i = 0; i < _students.length; i++) {
+      if (_students[i].uid == uid) _students[i] = _students[i].copyWith(status: status);
+    }
+    await _refreshCounts(courseId);
+  }
+
+  /// Rechazar una solicitud: el estudiante sale de la lista del curso.
+  Future<void> rejectRequest(String courseId, String uid) async {
+    await _fakeDelay();
+    _students.removeWhere((student) => student.uid == uid);
+    await _refreshCounts(courseId);
+  }
+
+  /// Actualiza en el curso los contadores de inscritos y pendientes.
+  Future<void> _refreshCounts(String courseId) async {
+    var enrolled = 0;
+    var pending = 0;
+    for (final student in _students) {
+      if (student.status == EnrollmentStatus.enrolled) enrolled++;
+      if (student.status == EnrollmentStatus.pending) pending++;
+    }
+    final course = await getCourse(courseId);
+    if (course != null) {
+      await updateCourse(course.copyWith(enrolledCount: enrolled, pendingCount: pending));
+    }
+  }
+
+  /// SIMULA leer el archivo de matriculados (todavía no se lee un Excel real).
+  /// Devuelve 32 filas válidas y 2 con error, como en el mockup.
+  Future<ImportPreview> readSampleOfficialList() async {
+    await _fakeDelay();
+    const firstNames = ['Aldo', 'Camila', 'David', 'Elena', 'Fabián', 'Gloria', 'Héctor', 'Isabel'];
+    const lastNames = ['García', 'Morales', 'Rivas', 'Suárez'];
+    final rows = <OfficialListEntry>[];
+    for (var i = 0; i < 32; i++) {
+      final first = firstNames[i % firstNames.length];
+      final last = lastNames[i % lastNames.length];
+      final code = '2024-${(842 + i * 37).toString().padLeft(4, '0')}';
+      rows.add(OfficialListEntry(
+        code: code,
+        name: '$first $last',
+        email: '${_withoutAccents(first)}.${_withoutAccents(last)}$i@udla.edu.co',
+      ));
+    }
+    return ImportPreview(
+      fileName: 'lista_programacion_movil.xlsx',
+      fileSize: '34.2 KB',
+      sheetName: 'Matriculados',
+      validRows: rows,
+      errorRows: const [
+        ImportRowError(row: 14, message: 'Falta el código estudiantil en la columna A.'),
+        ImportRowError(row: 27, message: 'Formato de correo inválido ("juan.perez_udla").', isEmailError: true),
+      ],
+    );
+  }
+
+  /// Los correos no llevan tildes ni mayúsculas: "García" -> "garcia".
+  String _withoutAccents(String text) {
+    const withAccent = 'áéíóúñ';
+    const plain = 'aeioun';
+    var result = text.toLowerCase();
+    for (var i = 0; i < withAccent.length; i++) {
+      result = result.replaceAll(withAccent[i], plain[i]);
+    }
+    return result;
+  }
+
+  /// Guarda la lista oficial: los que aún no están en el curso quedan "Sin unirse".
+  /// Actualizar la lista agrega a los nuevos y no retira a nadie (especificación).
+  Future<int> importOfficialList(String courseId, List<OfficialListEntry> entries) async {
+    await _fakeDelay();
+    var added = 0;
+    for (final entry in entries) {
+      var exists = false;
+      for (final student in _students) {
+        if (student.code == entry.code || student.email == entry.email) exists = true;
+      }
+      if (!exists) {
+        _students.add(CourseStudent(
+          uid: 'lista-${entry.code}',
+          name: entry.name,
+          code: entry.code,
+          email: entry.email,
+          status: EnrollmentStatus.notJoined,
+        ));
+        added++;
+      }
+    }
+    final course = await getCourse(courseId);
+    if (course != null) {
+      await updateCourse(course.copyWith(
+        officialListCount: entries.length,
+        officialListImportedAt: DateTime.now(),
+      ));
+    }
+    return added;
   }
 
   /// Clases ya dictadas, de la más reciente a la más antigua.
