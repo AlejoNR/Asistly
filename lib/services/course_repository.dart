@@ -282,7 +282,9 @@ class CourseRepository {
     final sessions = <ClassSession>[];
     var date = DateTime(2026, 9, 21, 8, 0);
     for (var number = 14; number >= 1; number--) {
-      final present = 26 + (number * 7) % 6; // Números variados pero creíbles
+      var present = 26 + (number * 7) % 6; // Números variados pero creíbles
+      if (number == 5) present = 23; // Dos clases flojas (< 75 %), como en el mockup del reporte
+      if (number == 10) present = 22;
       sessions.add(ClassSession(
         id: '$courseId-$number',
         courseId: courseId,

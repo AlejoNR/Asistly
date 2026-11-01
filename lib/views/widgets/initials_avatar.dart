@@ -7,8 +7,16 @@ import '../../theme/app_theme.dart';
 class InitialsAvatar extends StatelessWidget {
   final String initials;
   final double size;
+  final Color background;
+  final Color foreground;
 
-  const InitialsAvatar({super.key, required this.initials, this.size = 40});
+  const InitialsAvatar({
+    super.key,
+    required this.initials,
+    this.size = 40,
+    this.background = AppColors.surfaceContainer,
+    this.foreground = AppColors.primaryContainer,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,13 +24,10 @@ class InitialsAvatar extends StatelessWidget {
       width: size,
       height: size,
       alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceContainer,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: background, shape: BoxShape.circle),
       child: Text(
         initials,
-        style: AppText.titleMd.copyWith(color: AppColors.primaryContainer, fontSize: size * 0.38),
+        style: AppText.titleMd.copyWith(color: foreground, fontSize: size * 0.38),
       ),
     );
   }

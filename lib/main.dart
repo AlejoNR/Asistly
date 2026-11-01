@@ -12,9 +12,11 @@ import 'models/class_session.dart';
 import 'models/course.dart';
 import 'viewmodels/active_session_viewmodel.dart';
 import 'viewmodels/check_email_viewmodel.dart';
+import 'viewmodels/class_history_viewmodel.dart';
 import 'viewmodels/closed_session_viewmodel.dart';
 import 'viewmodels/course_created_viewmodel.dart';
 import 'viewmodels/course_detail_viewmodel.dart';
+import 'viewmodels/course_report_viewmodel.dart';
 import 'viewmodels/course_students_viewmodel.dart';
 import 'viewmodels/demo_viewmodel.dart';
 import 'viewmodels/forgot_password_viewmodel.dart';
@@ -36,9 +38,11 @@ import 'views/role_view.dart';
 import 'views/splash_view.dart';
 import 'views/student/student_main_view.dart';
 import 'views/teacher/active_session_view.dart';
+import 'views/teacher/class_history_view.dart';
 import 'views/teacher/closed_session_view.dart';
 import 'views/teacher/course_created_view.dart';
 import 'views/teacher/course_detail_view.dart';
+import 'views/teacher/course_report_view.dart';
 import 'views/teacher/course_students_view.dart';
 import 'views/teacher/import_list_view.dart';
 import 'views/teacher/manual_attendance_view.dart';
@@ -161,6 +165,22 @@ class MyApp extends StatelessWidget {
             create: (context) =>
                 CourseDetailViewModel(_courses(context), courseId),
             child: const CourseDetailView(),
+          );
+        },
+        'course_report': (context) {
+          final courseId = ModalRoute.of(context)!.settings.arguments as String;
+          return ChangeNotifierProvider(
+            create: (context) =>
+                CourseReportViewModel(_courses(context), courseId),
+            child: const CourseReportView(),
+          );
+        },
+        'class_history': (context) {
+          final courseId = ModalRoute.of(context)!.settings.arguments as String;
+          return ChangeNotifierProvider(
+            create: (context) =>
+                ClassHistoryViewModel(_courses(context), courseId),
+            child: const ClassHistoryView(),
           );
         },
         'import_list': (context) {

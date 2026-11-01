@@ -4,12 +4,14 @@ import 'package:provider/provider.dart';
 import '../../services/auth_repository.dart';
 import '../../services/course_repository.dart';
 import '../../viewmodels/main_viewmodel.dart';
+import '../../viewmodels/teacher_courses_viewmodel.dart';
 import '../../viewmodels/teacher_home_viewmodel.dart';
+import '../../viewmodels/teacher_profile_viewmodel.dart';
 import '../widgets/app_bottom_nav.dart';
 import '../widgets/app_top_bar.dart';
-import '../widgets/coming_soon.dart';
-import '../widgets/temporary_profile.dart';
+import 'teacher_courses_view.dart';
 import 'teacher_home_view.dart';
+import 'teacher_profile_view.dart';
 
 /// Pantalla principal del docente con su barra inferior: Inicio, Cursos, Perfil.
 class TeacherMainView extends StatelessWidget {
@@ -20,12 +22,6 @@ class TeacherMainView extends StatelessWidget {
     NavItem(Icons.menu_book_outlined, 'Cursos'),
     NavItem(Icons.account_circle_outlined, 'Perfil'),
   ];
-
-  Future<void> _signOut(BuildContext context, MainViewModel vm) async {
-    await vm.signOut();
-    if (!context.mounted) return;
-    Navigator.pushNamedAndRemoveUntil(context, 'role', (r) => false);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,8 +42,19 @@ class TeacherMainView extends StatelessWidget {
             ),
             child: const TeacherHomeView(),
           ),
-          const ComingSoon(icon: Icons.menu_book_outlined, title: 'Mis cursos'),
-          TemporaryProfile(user: vm.user, onSignOut: () => _signOut(context, vm)),
+          ChangeNotifierProvider(
+            create: (context) => TeacherCoursesViewModel(
+              Provider.of<CourseRepository>(context, listen: false),
+            ),
+            child: const TeacherCoursesView(),
+          ),
+          ChangeNotifierProvider(
+            create: (context) => TeacherProfileViewModel(
+              Provider.of<AuthRepository>(context, listen: false),
+              Provider.of<CourseRepository>(context, listen: false),
+            ),
+            child: const TeacherProfileView(),
+          ),
         ],
       ),
       bottomNavigationBar: AppBottomNav(
