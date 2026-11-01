@@ -138,6 +138,13 @@ class CourseRepository {
     return null;
   }
 
+  /// Reemplaza un curso de la lista por su versión actualizada.
+  Future<void> updateCourse(Course updated) async {
+    for (var i = 0; i < _courses.length; i++) {
+      if (_courses[i].id == updated.id) _courses[i] = updated;
+    }
+  }
+
   Future<List<CourseStudent>> getCourseStudents(String courseId) async {
     await _fakeDelay();
     return List.of(_students);

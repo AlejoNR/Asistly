@@ -9,6 +9,7 @@ import 'theme/app_theme.dart';
 import 'models/course.dart';
 import 'viewmodels/check_email_viewmodel.dart';
 import 'viewmodels/course_created_viewmodel.dart';
+import 'viewmodels/course_detail_viewmodel.dart';
 import 'viewmodels/demo_viewmodel.dart';
 import 'viewmodels/forgot_password_viewmodel.dart';
 import 'viewmodels/login_viewmodel.dart';
@@ -27,6 +28,7 @@ import 'views/role_view.dart';
 import 'views/splash_view.dart';
 import 'views/student/student_main_view.dart';
 import 'views/teacher/course_created_view.dart';
+import 'views/teacher/course_detail_view.dart';
 import 'views/teacher/new_course_view.dart';
 import 'views/teacher/teacher_main_view.dart';
 import 'views/verify_email_view.dart';
@@ -127,6 +129,13 @@ class MyApp extends StatelessWidget {
           return ChangeNotifierProvider(
             create: (context) => CourseCreatedViewModel(course),
             child: const CourseCreatedView(),
+          );
+        },
+        'course_detail': (context) {
+          final courseId = ModalRoute.of(context)!.settings.arguments as String;
+          return ChangeNotifierProvider(
+            create: (context) => CourseDetailViewModel(_courses(context), courseId),
+            child: const CourseDetailView(),
           );
         },
         'student_home': (context) => ChangeNotifierProvider(

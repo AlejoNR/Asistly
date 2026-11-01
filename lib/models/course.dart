@@ -49,6 +49,39 @@ class Course {
     this.hasActiveSession = false,
   });
 
+  /// Devuelve una copia del curso cambiando solo los campos que se pasen.
+  /// Ej.: course.copyWith(validateBluetooth: false)
+  Course copyWith({
+    int? enrolledCount,
+    int? pendingCount,
+    int? officialListCount,
+    DateTime? officialListImportedAt,
+    int? registrationMinutes,
+    bool? validateBluetooth,
+    bool? hasActiveSession,
+  }) {
+    return Course(
+      id: id,
+      name: name,
+      group: group,
+      semester: semester,
+      days: days,
+      startTime: startTime,
+      endTime: endTime,
+      room: room,
+      enrollCode: enrollCode,
+      teacherName: teacherName,
+      averageAttendance: averageAttendance,
+      enrolledCount: enrolledCount ?? this.enrolledCount,
+      pendingCount: pendingCount ?? this.pendingCount,
+      officialListCount: officialListCount ?? this.officialListCount,
+      officialListImportedAt: officialListImportedAt ?? this.officialListImportedAt,
+      registrationMinutes: registrationMinutes ?? this.registrationMinutes,
+      validateBluetooth: validateBluetooth ?? this.validateBluetooth,
+      hasActiveSession: hasActiveSession ?? this.hasActiveSession,
+    );
+  }
+
   static const _dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
   /// "Lun y Mié", "Lun, Mié y Vie" o "Vie".
