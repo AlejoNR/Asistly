@@ -1,5 +1,4 @@
-import 'package:asistly/core/utils/validators.dart';
-import 'package:asistly/viewmodels/email_verification_viewmodel.dart';
+import 'package:asistly/util/validators.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -37,6 +36,6 @@ void main() {
   });
 
   test('maskEmail oculta el usuario', () {
-    expect(EmailVerificationViewModel.maskEmail('usuario@udla.edu.co'), 'u***@udla.edu.co');
+    expect(maskEmail('usuario@udla.edu.co'), 'u***@udla.edu.co');
   });
 }

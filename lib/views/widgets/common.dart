@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_theme.dart';
 
 /// Botón circular "volver" del diseño.
 class CircleBackButton extends StatelessWidget {
@@ -94,8 +94,9 @@ class TextLink extends StatelessWidget {
   }
 }
 
+/// Muestra un mensaje corto abajo de la pantalla (quita el anterior si había uno).
 void showAppSnackBar(BuildContext context, String message) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(message)));
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(SnackBar(content: Text(message)));
 }

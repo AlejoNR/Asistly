@@ -1,45 +1,42 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
-import '../data/models/user_role.dart';
-import '../data/repositories/auth_repository.dart';
+import '../models/user_role.dart';
+import '../services/auth_repository.dart';
 
+/// ViewModel del inicio de sesión.
 class LoginViewModel extends ChangeNotifier {
-  LoginViewModel(this._repo, this.role);
-
   final AuthRepository _repo;
-  final UserRole role;
+  LoginViewModel(this._repo);
 
-  bool _isLoading = false;
-  bool _obscurePassword = true;
-  String? _error;
-
-  bool get isLoading => _isLoading;
-  bool get obscurePassword => _obscurePassword;
-  String? get error => _error;
+  bool isLoading = false;
+  bool obscurePassword = true;
+  String? error;
 
   void togglePasswordVisibility() {
-    _obscurePassword = !_obscurePassword;
+    obscurePassword = !obscurePassword;
     notifyListeners();
   }
 
   void clearError() {
-    if (_error == null) return;
-    _error = null;
+    if (error == null) return;
+    error = null;
     notifyListeners();
   }
 
-  /// Devuelve a dónde navegar, o `null` si falló (ver [error]).
-  Future<AuthDestination?> login(String email, String password) async {
-    _isLoading = true;
-    _error = null;
+  /// Devuelve la ruta a la que hay que ir (el Home del rol o 'verify_email'),
+  /// o null si falló (el mensaje queda en [error]).
+  Future<String?> login(String email, String password, UserRole role) async {
+    isLoading = true;
+    error = null;
     notifyListeners();
+
     try {
-      return await _repo.signIn(email: email, password: password, expectedRole: role);
-    } on AuthFailure catch (e) {
-      _error = e.message;
+      return await _repo.login(email, password, role);
+    } on AuthException catch (e) {
+      error = e.message;
       return null;
     } finally {
-      _isLoading = false;
+      isLoading = false;
       notifyListeners();
     }
   }

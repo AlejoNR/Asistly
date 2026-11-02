@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_theme.dart';
 
 /// Botón principal amarillo (o azul con [PrimaryButton.dark]).
 class PrimaryButton extends StatelessWidget {

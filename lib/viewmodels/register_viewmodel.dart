@@ -1,77 +1,64 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
-import '../data/models/user_role.dart';
-import '../data/repositories/auth_repository.dart';
+import '../services/auth_repository.dart';
 
+/// ViewModel del registro de estudiantes.
 class RegisterViewModel extends ChangeNotifier {
-  RegisterViewModel(this._repo, this.role);
-
   final AuthRepository _repo;
-  final UserRole role;
+  RegisterViewModel(this._repo);
 
-  bool _isLoading = false;
-  bool _obscurePassword = true;
-  bool _obscureConfirm = true;
-  bool _acceptedTerms = false;
-  String? _error;
-
-  bool get isLoading => _isLoading;
-  bool get obscurePassword => _obscurePassword;
-  bool get obscureConfirm => _obscureConfirm;
-  bool get acceptedTerms => _acceptedTerms;
-  String? get error => _error;
-
-  /// Solo los estudiantes quedan vinculados a un dispositivo.
-  bool get bindsDevice => role == UserRole.student;
-
-  String get codeLabel => role == UserRole.student ? 'Código estudiantil' : 'Código docente';
+  bool isLoading = false;
+  bool obscurePassword = true;
+  bool obscureConfirm = true;
+  bool acceptedTerms = false;
+  String? error;
 
   void togglePasswordVisibility() {
-    _obscurePassword = !_obscurePassword;
+    obscurePassword = !obscurePassword;
     notifyListeners();
   }
 
   void toggleConfirmVisibility() {
-    _obscureConfirm = !_obscureConfirm;
+    obscureConfirm = !obscureConfirm;
     notifyListeners();
   }
 
   void setAcceptedTerms(bool value) {
-    _acceptedTerms = value;
-    if (value) _error = null;
+    acceptedTerms = value;
+    if (value) error = null;
     notifyListeners();
   }
 
-  /// Devuelve `true` si la cuenta se creó (ver [error] si no).
+  /// Devuelve true si la cuenta se creó (si no, el mensaje queda en [error]).
   Future<bool> register({
     required String fullName,
     required String code,
     required String email,
     required String password,
   }) async {
-    if (!_acceptedTerms) {
-      _error = 'Debes aceptar los términos y el tratamiento de datos.';
+    if (!acceptedTerms) {
+      error = 'Debes aceptar los términos y el tratamiento de datos.';
       notifyListeners();
       return false;
     }
 
-    _isLoading = true;
-    _error = null;
+    isLoading = true;
+    error = null;
     notifyListeners();
+
     try {
-      await _repo.register(
+      await _repo.registerStudent(
         fullName: fullName,
         code: code,
         email: email,
         password: password,
-        role: role,
       );
       return true;
-    } on AuthFailure catch (e) {
-      _error = e.message;
+    } on AuthException catch (e) {
+      error = e.message;
       return false;
     } finally {
-      _isLoading = false;
+      isLoading = false;
       notifyListeners();
     }
   }
