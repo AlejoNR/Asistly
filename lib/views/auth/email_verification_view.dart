@@ -120,6 +120,12 @@ class _EmailVerificationViewState extends State<EmailVerificationView> {
                   ],
                 ),
               ),
+              const SizedBox(height: 12),
+              Text(
+                '¿No lo ves? Revisa tu carpeta de correo no deseado.',
+                textAlign: TextAlign.center,
+                style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
+              ),
               const SizedBox(height: 32),
               PrimaryButton(
                 label: 'Ya verifiqué mi correo',
