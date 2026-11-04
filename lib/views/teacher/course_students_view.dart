@@ -10,6 +10,7 @@ import '../widgets/common.dart';
 import '../widgets/detail_app_bar.dart';
 import '../widgets/request_card.dart';
 import '../widgets/withdraw_sheet.dart';
+import '../widgets/load_error.dart';
 
 /// Estudiantes del curso (mockup 14): búsqueda, pestañas y acciones por estudiante.
 class CourseStudentsView extends StatelessWidget {
@@ -23,8 +24,14 @@ class CourseStudentsView extends StatelessWidget {
   Future<void> _withdraw(BuildContext context, CourseStudentsViewModel vm, CourseStudent student) async {
     final confirmed = await showWithdrawSheet(context, student);
     if (!confirmed) return;
-    await vm.withdraw(student);
-    if (context.mounted) showAppSnackBar(context, '${student.name} fue retirado del curso.');
+    final error = await vm.withdraw(student);
+    if (context.mounted) showAppSnackBar(context, error ?? '${student.name} fue retirado del curso.');
+  }
+
+  /// Espera una acción y, si devolvió un error, lo muestra abajo.
+  Future<void> _run(BuildContext context, Future<String?> action) async {
+    final error = await action;
+    if (error != null && context.mounted) showAppSnackBar(context, error);
   }
 
   /// Menú de los tres puntos de cada estudiante.
@@ -73,8 +80,10 @@ class CourseStudentsView extends StatelessWidget {
           children: [
             const SizedBox(height: 8),
             ListTile(
-              leading: Icon(vm.sortByAttendance ? Icons.radio_button_off : Icons.radio_button_checked,
-                  color: AppColors.primary),
+              leading: Icon(
+                vm.sortByAttendance ? Icons.radio_button_off : Icons.radio_button_checked,
+                color: AppColors.primary,
+              ),
               title: const Text('Orden alfabético'),
               onTap: () {
                 vm.setSortByAttendance(false);
@@ -82,8 +91,10 @@ class CourseStudentsView extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: Icon(vm.sortByAttendance ? Icons.radio_button_checked : Icons.radio_button_off,
-                  color: AppColors.primary),
+              leading: Icon(
+                vm.sortByAttendance ? Icons.radio_button_checked : Icons.radio_button_off,
+                color: AppColors.primary,
+              ),
               title: const Text('Menor asistencia primero'),
               onTap: () {
                 vm.setSortByAttendance(true);
@@ -107,23 +118,28 @@ class CourseStudentsView extends StatelessWidget {
       appBar: const DetailAppBar(title: 'Estudiantes del curso'),
       body: vm.isLoading && course == null
           ? const Center(child: CircularProgressIndicator())
+          : vm.error != null
+          ? Center(child: LoadError(message: vm.error!, onRetry: vm.load))
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                // Wrap: si el título y el botón no caben juntos, el botón baja a la
+                // siguiente línea en vez de partir "Estudiantes" en dos.
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.end,
+                  spacing: 12,
+                  runSpacing: 12,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Estudiantes', style: AppText.headlineLg.copyWith(color: AppColors.onSurface)),
-                          Text(
-                            '${course?.name ?? ''} · ${vm.enrolled.length} inscritos',
-                            style: AppText.titleMd.copyWith(color: AppColors.primaryContainer),
-                          ),
-                        ],
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Estudiantes', style: AppText.headlineLg.copyWith(color: AppColors.onSurface)),
+                        Text(
+                          '${course?.name ?? ''} · ${vm.enrolled.length} inscritos',
+                          style: AppText.titleMd.copyWith(color: AppColors.primaryContainer),
+                        ),
+                      ],
                     ),
                     OutlinedButton.icon(
                       onPressed: () => _openImport(context, vm),
@@ -179,8 +195,9 @@ class CourseStudentsView extends StatelessWidget {
                 Text(vm.tabHint, style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
                 const SizedBox(height: 16),
                 if (vm.currentTab == 2 && students.isNotEmpty) ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    spacing: 8,
                     children: [
                       TextButton.icon(
                         onPressed: () async {
@@ -191,7 +208,7 @@ class CourseStudentsView extends StatelessWidget {
                         label: const Text('Ver solicitudes'),
                       ),
                       TextButton.icon(
-                        onPressed: vm.acceptAll,
+                        onPressed: () => _run(context, vm.acceptAll()),
                         icon: const Icon(Icons.done_all),
                         label: const Text('Aceptar todas'),
                       ),
@@ -206,8 +223,8 @@ class CourseStudentsView extends StatelessWidget {
                     if (vm.currentTab == 2)
                       RequestCard(
                         student: student,
-                        onAccept: () => vm.accept(student),
-                        onReject: () => vm.reject(student),
+                        onAccept: () => _run(context, vm.accept(student)),
+                        onReject: () => _run(context, vm.reject(student)),
                       )
                     else
                       _StudentRow(
@@ -240,44 +257,45 @@ class _Tabs extends StatelessWidget {
     final tabs = <Widget>[];
     for (var i = 0; i < labels.length; i++) {
       final selected = vm.currentTab == i;
-      tabs.add(InkWell(
-        onTap: () => vm.selectTab(i),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(4, 8, 4, 10),
-          margin: const EdgeInsets.only(right: 16),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: selected ? AppColors.primaryContainer : Colors.transparent,
-                width: 3,
+      tabs.add(
+        InkWell(
+          onTap: () => vm.selectTab(i),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 10),
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: selected ? AppColors.primaryContainer : Colors.transparent, width: 3),
               ),
             ),
-          ),
-          child: Row(
-            children: [
-              Text(
-                labels[i],
-                style: AppText.labelLg.copyWith(
-                  color: selected ? AppColors.primaryContainer : AppColors.onSurfaceVariant,
-                ),
-              ),
-              // Burbuja amarilla con el número de pendientes.
-              if (i == 2 && vm.pending.isNotEmpty) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: AppColors.tertiaryFixedDim,
-                    borderRadius: BorderRadius.circular(999),
+            child: Row(
+              children: [
+                Text(
+                  labels[i],
+                  style: AppText.labelLg.copyWith(
+                    color: selected ? AppColors.primaryContainer : AppColors.onSurfaceVariant,
                   ),
-                  child: Text('${vm.pending.length}',
-                      style: AppText.labelMd.copyWith(color: AppColors.onTertiaryFixed)),
                 ),
+                // Burbuja amarilla con el número de pendientes.
+                if (i == 2 && vm.pending.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: AppColors.tertiaryFixedDim,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '${vm.pending.length}',
+                      style: AppText.labelMd.copyWith(color: AppColors.onTertiaryFixed),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
-      ));
+      );
     }
 
     return Container(
@@ -304,72 +322,84 @@ class _StudentRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final atRisk = showPercent && student.isAtRisk;
 
+    final percentChip = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: atRisk ? AppColors.errorContainer : AppColors.primaryFixed,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (atRisk)
+            const Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.error)
+          else
+            Container(
+              width: 6,
+              height: 6,
+              decoration: const BoxDecoration(color: AppColors.secondary, shape: BoxShape.circle),
+            ),
+          const SizedBox(width: 4),
+          Text(
+            '${student.attendancePercent.round()}%',
+            style: AppText.labelLg.copyWith(color: atRisk ? AppColors.error : AppColors.secondary),
+          ),
+        ],
+      ),
+    );
+
     return AppCard(
       padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
-      child: Row(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: atRisk ? AppColors.errorContainer : AppColors.primaryFixed,
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              student.initials,
-              style: AppText.titleMd.copyWith(color: atRisk ? AppColors.onErrorContainer : AppColors.primary),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(student.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
-                Row(
+      // En pantallas angostas el porcentaje baja debajo del nombre,
+      // para que el nombre no quede cortado ("Alejandr...").
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final narrow = constraints.maxWidth < 330;
+          return Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: atRisk ? AppColors.errorContainer : AppColors.primaryFixed,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  student.initials,
+                  style: AppText.titleMd.copyWith(color: atRisk ? AppColors.onErrorContainer : AppColors.primary),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.badge_outlined, size: 16, color: AppColors.onSurfaceVariant),
-                    const SizedBox(width: 4),
-                    Text(student.code, style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+                    Text(
+                      student.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.titleMd.copyWith(color: AppColors.onSurface),
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.badge_outlined, size: 16, color: AppColors.onSurfaceVariant),
+                        const SizedBox(width: 4),
+                        Text(student.code, style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+                      ],
+                    ),
+                    if (showPercent && narrow) ...[const SizedBox(height: 6), percentChip],
                   ],
                 ),
-              ],
-            ),
-          ),
-          if (showPercent)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: atRisk ? AppColors.errorContainer : AppColors.primaryFixed,
-                borderRadius: BorderRadius.circular(999),
               ),
-              child: Row(
-                children: [
-                  if (atRisk)
-                    const Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.error)
-                  else
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(color: AppColors.secondary, shape: BoxShape.circle),
-                    ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${student.attendancePercent.round()}%',
-                    style: AppText.labelLg.copyWith(color: atRisk ? AppColors.error : AppColors.secondary),
-                  ),
-                ],
-              ),
-            ),
-          if (onMenu != null)
-            IconButton(onPressed: onMenu, icon: const Icon(Icons.more_vert), tooltip: 'Opciones')
-          else
-            const SizedBox(width: 12),
-        ],
+              if (showPercent && !narrow) percentChip,
+              if (onMenu != null)
+                IconButton(onPressed: onMenu, icon: const Icon(Icons.more_vert), tooltip: 'Opciones')
+              else
+                const SizedBox(width: 12),
+            ],
+          );
+        },
       ),
     );
   }

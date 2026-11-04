@@ -18,15 +18,23 @@ class ClosedSessionViewModel extends BaseViewModel {
   }
 
   bool isLoading = true;
+  String? error;
   Course? course;
   List<SessionAttendance> present = [];
   List<CourseStudent> absent = [];
   int currentTab = 0; // 0 Presentes, 1 Ausentes
 
   Future<void> load() async {
-    course = await _courseRepo.getCourse(session.courseId);
-    present = await _sessionRepo.getClosedAttendance(session);
-    absent = await _sessionRepo.getClosedAbsents(session);
+    isLoading = true;
+    error = null;
+    notify();
+    try {
+      course = await _courseRepo.getCourse(session.courseId);
+      present = await _sessionRepo.getClosedAttendance(session);
+      absent = await _sessionRepo.getClosedAbsents(session);
+    } catch (e) {
+      error = errorMessage(e);
+    }
     isLoading = false;
     notify();
   }

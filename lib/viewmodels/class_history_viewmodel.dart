@@ -15,6 +15,7 @@ class ClassHistoryViewModel extends BaseViewModel {
   }
 
   bool isLoading = true;
+  String? error;
   Course? course;
   int totalSessions = 0;
 
@@ -24,16 +25,21 @@ class ClassHistoryViewModel extends BaseViewModel {
 
   Future<void> load() async {
     isLoading = true;
+    error = null;
     notify();
-    course = await _repo.getCourse(courseId);
-    final sessions = await _repo.getCourseSessions(courseId); // Ya vienen de la más reciente a la más antigua
-    totalSessions = sessions.length;
+    try {
+      course = await _repo.getCourse(courseId);
+      final sessions = await _repo.getCourseSessions(courseId); // Ya vienen de la más reciente a la más antigua
+      totalSessions = sessions.length;
 
-    sessionsByMonth = {};
-    for (final session in sessions) {
-      final month = DateFormatEs.monthYear(session.date);
-      if (!sessionsByMonth.containsKey(month)) sessionsByMonth[month] = [];
-      sessionsByMonth[month]!.add(session);
+      sessionsByMonth = {};
+      for (final session in sessions) {
+        final month = DateFormatEs.monthYear(session.date);
+        if (!sessionsByMonth.containsKey(month)) sessionsByMonth[month] = [];
+        sessionsByMonth[month]!.add(session);
+      }
+    } catch (e) {
+      error = errorMessage(e);
     }
 
     isLoading = false;

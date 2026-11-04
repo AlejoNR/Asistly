@@ -14,6 +14,7 @@ class CourseDetailViewModel extends BaseViewModel {
   }
 
   bool isLoading = true;
+  String? error;
   Course? course;
   List<ClassSession> sessions = [];
 
@@ -25,9 +26,15 @@ class CourseDetailViewModel extends BaseViewModel {
 
   Future<void> load() async {
     isLoading = true;
+    error = null;
     notify();
-    course = await _repo.getCourse(courseId);
-    sessions = await _repo.getCourseSessions(courseId);
+    try {
+      course = await _repo.getCourse(courseId);
+      sessions = await _repo.getCourseSessions(courseId);
+      if (course == null) error = 'No se encontró el curso.';
+    } catch (e) {
+      error = errorMessage(e);
+    }
     isLoading = false;
     notify();
   }
@@ -41,7 +48,7 @@ class CourseDetailViewModel extends BaseViewModel {
     final minutes = current.registrationMinutes + delta;
     if (minutes < 5 || minutes > 60) return;
     course = current.copyWith(registrationMinutes: minutes);
-    _repo.updateCourse(course!);
+    _save(current);
     notify();
   }
 
@@ -49,8 +56,22 @@ class CourseDetailViewModel extends BaseViewModel {
     final current = course;
     if (current == null) return;
     course = current.copyWith(validateBluetooth: value);
-    _repo.updateCourse(course!);
+    _save(current);
     notify();
+  }
+
+  /// Guarda la configuración. Si falla, vuelve al valor anterior y avisa.
+  String? saveError;
+
+  Future<void> _save(Course previous) async {
+    try {
+      await _repo.updateCourse(course!);
+      saveError = null;
+    } catch (e) {
+      course = previous;
+      saveError = errorMessage(e);
+      notify();
+    }
   }
 
   // ---------- Botón "Iniciar clase" ----------

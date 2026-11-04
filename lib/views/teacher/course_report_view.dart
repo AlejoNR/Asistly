@@ -9,6 +9,7 @@ import '../../viewmodels/course_report_viewmodel.dart';
 import '../widgets/app_card.dart';
 import '../widgets/detail_app_bar.dart';
 import '../widgets/initials_avatar.dart';
+import '../widgets/load_error.dart';
 
 /// Reporte del curso (mockup 20): promedio, clases hechas, estudiantes en riesgo,
 /// dona de distribución, barras por clase y lista de estudiantes. Sin exportación.
@@ -23,7 +24,11 @@ class CourseReportView extends StatelessWidget {
     if (vm.isLoading || course == null) {
       return Scaffold(
         appBar: const DetailAppBar(title: 'Reporte del curso'),
-        body: Center(child: vm.isLoading ? const CircularProgressIndicator() : const Text('No se encontró el curso.')),
+        body: Center(
+          child: vm.isLoading
+              ? const CircularProgressIndicator()
+              : LoadError(message: vm.error ?? 'No se encontró el curso.', onRetry: vm.load),
+        ),
       );
     }
 

@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'course.dart';
 
 /// Una clase abierta en este momento (sesión de asistencia en curso).
@@ -44,6 +46,19 @@ class SessionAttendance {
     this.reason,
   });
 
+  /// Lee una asistencia de `sesiones/{id}/asistencias/{uid}`.
+  factory SessionAttendance.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data() ?? const {};
+    return SessionAttendance(
+      uid: doc.id,
+      name: data['nombre'] as String? ?? '',
+      code: data['codigo'] as String? ?? '',
+      markedAt: (data['hora'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      method: data['metodo'] as String? ?? 'qr',
+      reason: data['motivo'] as String?,
+    );
+  }
+
   bool get isManual => method == 'manual';
 
   String get initials {
@@ -61,4 +76,9 @@ class FailReport {
   final DateTime reportedAt;
 
   const FailReport({required this.uid, required this.reportedAt});
+
+  factory FailReport.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data() ?? const {};
+    return FailReport(uid: doc.id, reportedAt: (data['hora'] as Timestamp?)?.toDate() ?? DateTime.now());
+  }
 }

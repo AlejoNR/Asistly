@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../viewmodels/teacher_courses_viewmodel.dart';
 import '../widgets/app_card.dart';
 import '../widgets/status_chip.dart';
+import '../widgets/load_error.dart';
 
 /// Pestaña "Cursos" del docente (sin mockup propio): lista compacta de todos
 /// sus cursos con buscador, en el mismo estilo de las tarjetas del Home.
@@ -25,10 +26,7 @@ class TeacherCoursesView extends StatelessWidget {
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainer,
-              borderRadius: BorderRadius.circular(999),
-            ),
+            decoration: BoxDecoration(color: AppColors.surfaceContainer, borderRadius: BorderRadius.circular(999)),
             child: Text(
               vm.totalCourses == 1 ? '1 materia' : '${vm.totalCourses} materias',
               style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant),
@@ -45,20 +43,21 @@ class TeacherCoursesView extends StatelessWidget {
           filled: true,
           fillColor: AppColors.surfaceContainerLowest,
           contentPadding: const EdgeInsets.symmetric(vertical: 14),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
         ),
       ),
       const SizedBox(height: 16),
     ];
 
     if (vm.isLoading) {
-      children.add(const Padding(
-        padding: EdgeInsets.only(top: 48),
-        child: Center(child: CircularProgressIndicator()),
-      ));
+      children.add(
+        const Padding(
+          padding: EdgeInsets.only(top: 48),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    } else if (vm.error != null) {
+      children.add(LoadError(message: vm.error!, onRetry: vm.loadCourses));
     } else if (vm.courses.isEmpty) {
       children.add(_EmptyState(searching: vm.query.trim().isNotEmpty));
     } else {
@@ -72,10 +71,7 @@ class TeacherCoursesView extends StatelessWidget {
       backgroundColor: AppColors.surface,
       body: RefreshIndicator(
         onRefresh: vm.loadCourses,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-          children: children,
-        ),
+        child: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 96), children: children),
       ),
       floatingActionButton: FloatingActionButton.extended(
         // El Home también tiene un botón flotante y las dos pestañas viven a la vez
@@ -119,12 +115,16 @@ class _CourseRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(course.name, style: AppText.titleMd.copyWith(color: AppColors.primary)),
-                    Text('${course.group} · ${course.semester}',
-                        style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant)),
+                    Text(
+                      '${course.group} · ${course.semester}',
+                      style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant),
+                    ),
+                    // El chip va debajo del nombre para no apretarlo en pantallas angostas.
+                    if (isLive) ...[const SizedBox(height: 6), const StatusChip.live()],
                   ],
                 ),
               ),
-              if (isLive) const StatusChip.live() else const Icon(Icons.chevron_right, color: AppColors.outline),
+              const Icon(Icons.chevron_right, color: AppColors.outline),
             ],
           ),
           const SizedBox(height: 10),
@@ -133,34 +133,52 @@ class _CourseRow extends StatelessWidget {
               const Icon(Icons.schedule, size: 16, color: AppColors.secondary),
               const SizedBox(width: 6),
               Expanded(
-                child: Text(course.scheduleLabel,
-                    style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+                child: Text(course.scheduleLabel, style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.group_outlined, size: 16, color: AppColors.secondary),
-              const SizedBox(width: 6),
-              Text('${course.enrolledCount} inscritos',
-                  style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
-              const SizedBox(width: 12),
-              if (course.pendingCount > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.tertiaryFixed,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    course.pendingCount == 1 ? '1 pendiente' : '${course.pendingCount} pendientes',
-                    style: AppText.labelSm.copyWith(color: AppColors.onTertiaryFixed),
-                  ),
+              // Wrap: si no cabe el chip de pendientes, baja a la siguiente línea
+              // en vez de empujar el código fuera de la tarjeta.
+              Expanded(
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.group_outlined, size: 16, color: AppColors.secondary),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${course.enrolledCount} inscritos',
+                          style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                    if (course.pendingCount > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.tertiaryFixed,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          course.pendingCount == 1 ? '1 pendiente' : '${course.pendingCount} pendientes',
+                          style: AppText.labelSm.copyWith(color: AppColors.onTertiaryFixed),
+                        ),
+                      ),
+                  ],
                 ),
-              const Spacer(),
-              Text(course.enrollCode,
-                  style: AppText.labelMd.copyWith(color: AppColors.primaryContainer, letterSpacing: 1)),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                course.enrollCode,
+                style: AppText.labelMd.copyWith(color: AppColors.primaryContainer, letterSpacing: 1),
+              ),
             ],
           ),
         ],

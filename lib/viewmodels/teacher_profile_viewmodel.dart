@@ -28,11 +28,16 @@ class TeacherProfileViewModel extends BaseViewModel {
   }
 
   Future<void> load() async {
-    final courses = await _courseRepo.getTeacherCourses();
-    courseCount = courses.length;
-    studentCount = 0;
-    for (final course in courses) {
-      studentCount += course.enrolledCount;
+    // Si falla, el perfil se muestra igual con los contadores en 0.
+    try {
+      final courses = await _courseRepo.getTeacherCourses();
+      courseCount = courses.length;
+      studentCount = 0;
+      for (final course in courses) {
+        studentCount += course.enrolledCount;
+      }
+    } catch (e) {
+      errorMessage(e);
     }
     notify();
   }

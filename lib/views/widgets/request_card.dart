@@ -12,12 +12,7 @@ class RequestCard extends StatelessWidget {
   final VoidCallback onAccept;
   final VoidCallback onReject;
 
-  const RequestCard({
-    super.key,
-    required this.student,
-    required this.onAccept,
-    required this.onReject,
-  });
+  const RequestCard({super.key, required this.student, required this.onAccept, required this.onReject});
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +22,7 @@ class RequestCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              InitialsAvatar(initials: student.initials, size: 56),
+              InitialsAvatar(initials: student.initials, size: 48),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -41,8 +36,10 @@ class RequestCard extends StatelessWidget {
                         color: AppColors.surfaceContainerHigh,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text('ID: ${student.code}',
-                          style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant)),
+                      child: Text(
+                        'ID: ${student.code}',
+                        style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant),
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Row(
@@ -64,39 +61,39 @@ class RequestCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
+          // Botones con altura mínima (no fija) y poco relleno lateral, para que
+          // "Rechazar" quepa en una línea en pantallas angostas.
           Row(
             children: [
               Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: FilledButton.icon(
-                    onPressed: onReject,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.errorContainer,
-                      foregroundColor: AppColors.error,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      textStyle: AppText.labelLg,
-                    ),
-                    icon: const Icon(Icons.close, size: 20),
-                    label: const Text('Rechazar'),
+                child: FilledButton.icon(
+                  onPressed: onReject,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.errorContainer,
+                    foregroundColor: AppColors.error,
+                    minimumSize: const Size(0, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    textStyle: AppText.labelLg,
                   ),
+                  icon: const Icon(Icons.close, size: 20),
+                  label: const Text('Rechazar'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: FilledButton.icon(
-                    onPressed: onAccept,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primaryContainer,
-                      foregroundColor: AppColors.onPrimary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      textStyle: AppText.labelLg,
-                    ),
-                    icon: const Icon(Icons.check, size: 20),
-                    label: const Text('Aceptar'),
+                child: FilledButton.icon(
+                  onPressed: onAccept,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primaryContainer,
+                    foregroundColor: AppColors.onPrimary,
+                    minimumSize: const Size(0, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    textStyle: AppText.labelLg,
                   ),
+                  icon: const Icon(Icons.check, size: 20),
+                  label: const Text('Aceptar'),
                 ),
               ),
             ],

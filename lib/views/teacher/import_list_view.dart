@@ -17,9 +17,10 @@ class ImportListView extends StatelessWidget {
 
   Future<void> _import(BuildContext context, ImportListViewModel vm) async {
     final total = vm.preview?.validRows.length ?? 0;
-    await vm.import();
-    if (!context.mounted) return;
-    showAppSnackBar(context, 'Lista oficial importada: $total estudiantes.');
+    final added = await vm.import();
+    if (!context.mounted || added == null) return; // Si falló, el error se ve en la pantalla
+    final news = added == 1 ? '1 nuevo' : '$added nuevos';
+    showAppSnackBar(context, 'Lista oficial importada: $total estudiantes ($news).');
     Navigator.pop(context);
   }
 
@@ -51,6 +52,7 @@ class ImportListView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _DropZone(isReading: vm.isReading, onTap: vm.pickFile),
+          if (vm.error != null) ...[const SizedBox(height: 12), ErrorBanner(vm.error!)],
           const SizedBox(height: 16),
           const _ColumnsInfo(),
           if (preview != null) ...[
@@ -81,8 +83,10 @@ class ImportListView extends StatelessWidget {
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text('Cancelar y volver',
-                          style: AppText.labelLg.copyWith(color: AppColors.onSurfaceVariant)),
+                      child: Text(
+                        'Cancelar y volver',
+                        style: AppText.labelLg.copyWith(color: AppColors.onSurfaceVariant),
+                      ),
                     ),
                   ],
                 ),
@@ -109,14 +113,12 @@ class _Tag extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[
-            Icon(icon, size: 16, color: AppColors.primaryContainer),
-            const SizedBox(width: 6),
-          ],
-          Text(
-            text,
-            style: AppText.labelLg.copyWith(
-              color: strong ? AppColors.primaryContainer : AppColors.onSurfaceVariant,
+          if (icon != null) ...[Icon(icon, size: 16, color: AppColors.primaryContainer), const SizedBox(width: 6)],
+          // Flexible: si el nombre del curso es largo, baja de línea en vez de desbordarse.
+          Flexible(
+            child: Text(
+              text,
+              style: AppText.labelLg.copyWith(color: strong ? AppColors.primaryContainer : AppColors.onSurfaceVariant),
             ),
           ),
         ],
@@ -148,18 +150,16 @@ class _DropZone extends StatelessWidget {
                 height: 64,
                 decoration: const BoxDecoration(color: AppColors.primaryFixed, shape: BoxShape.circle),
                 child: isReading
-                    ? const Padding(
-                        padding: EdgeInsets.all(18),
-                        child: CircularProgressIndicator(strokeWidth: 2.5),
-                      )
+                    ? const Padding(padding: EdgeInsets.all(18), child: CircularProgressIndicator(strokeWidth: 2.5))
                     : const Icon(Icons.upload_file_outlined, size: 30, color: AppColors.primaryContainer),
               ),
               const SizedBox(height: 12),
-              Text('Toca para seleccionar un archivo',
-                  style: AppText.titleLg.copyWith(color: AppColors.onSurface)),
+              Text('Toca para seleccionar un archivo', style: AppText.titleLg.copyWith(color: AppColors.onSurface)),
               const SizedBox(height: 2),
-              Text('Formatos: .xlsx o .csv (Máx. 5 MB)',
-                  style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+              Text(
+                'Formatos: .xlsx o .csv (Máx. 5 MB)',
+                style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
+              ),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -172,8 +172,7 @@ class _DropZone extends StatelessWidget {
                   children: [
                     const Icon(Icons.touch_app_outlined, size: 18, color: AppColors.primaryContainer),
                     const SizedBox(width: 6),
-                    Text('Explorar almacenamiento',
-                        style: AppText.labelMd.copyWith(color: AppColors.primaryContainer)),
+                    Text('Explorar almacenamiento', style: AppText.labelMd.copyWith(color: AppColors.primaryContainer)),
                   ],
                 ),
               ),
@@ -193,32 +192,20 @@ class _ColumnsInfo extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  'Usa el reporte de matriculados del sistema académico. Asistly solo toma estas columnas:',
-                  style: AppText.titleMd.copyWith(color: AppColors.primary),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryFixed,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text('Obligatorio', style: AppText.labelMd.copyWith(color: AppColors.primaryContainer)),
-              ),
-            ],
+          // La etiqueta va arriba del texto para que el texto use todo el ancho.
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(color: AppColors.primaryFixed, borderRadius: BorderRadius.circular(6)),
+            child: Text('Obligatorio', style: AppText.labelMd.copyWith(color: AppColors.primaryContainer)),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Usa el reporte de matriculados del sistema académico. Asistly solo toma estas columnas:',
+            style: AppText.titleMd.copyWith(color: AppColors.primary),
           ),
           const SizedBox(height: 12),
           const Wrap(
@@ -298,10 +285,7 @@ class _FileSummary extends StatelessWidget {
               Container(
                 width: 48,
                 height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                decoration: BoxDecoration(color: AppColors.surfaceContainer, borderRadius: BorderRadius.circular(12)),
                 child: const Icon(Icons.description_outlined, color: AppColors.primary),
               ),
               const SizedBox(width: 12),
@@ -309,12 +293,16 @@ class _FileSummary extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(preview.fileName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
-                    Text('${preview.fileSize} · Hoja: ${preview.sheetName}',
-                        style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+                    Text(
+                      preview.fileName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.titleMd.copyWith(color: AppColors.onSurface),
+                    ),
+                    Text(
+                      '${preview.fileSize} · Hoja: ${preview.sheetName}',
+                      style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
+                    ),
                   ],
                 ),
               ),
@@ -325,28 +313,31 @@ class _FileSummary extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _CountBox(
-                  icon: Icons.check_circle_outline,
-                  title: '${preview.validRows.length} válidos',
-                  subtitle: 'Listos para alta',
-                  color: AppColors.primary,
-                  background: AppColors.surfaceContainer,
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _CountBox(
+                    icon: Icons.check_circle_outline,
+                    title: '${preview.validRows.length} válidos',
+                    subtitle: 'Listos para alta',
+                    color: AppColors.primary,
+                    background: AppColors.surfaceContainer,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _CountBox(
-                  icon: Icons.error_outline,
-                  title: '${preview.errorRows.length} con error',
-                  subtitle: 'Requieren revisión',
-                  color: AppColors.absent,
-                  background: AppColors.absentContainer,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _CountBox(
+                    icon: Icons.error_outline,
+                    title: '${preview.errorRows.length} con error',
+                    subtitle: 'Requieren revisión',
+                    color: AppColors.absent,
+                    background: AppColors.absentContainer,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -374,22 +365,26 @@ class _CountBox extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(12)),
-      child: Row(
+      // El ícono va junto al número y el subtítulo debajo a todo lo ancho:
+      // así no se corta ("Listos par...") en pantallas angostas.
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: AppText.labelLg.copyWith(color: color)),
-                Text(subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.labelSm.copyWith(color: color)),
-              ],
-            ),
+          Row(
+            children: [
+              Icon(icon, size: 20, color: color),
+              const SizedBox(width: 6),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(title, style: AppText.labelLg.copyWith(color: color)),
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 2),
+          Text(subtitle, style: AppText.labelSm.copyWith(color: color)),
         ],
       ),
     );
@@ -410,17 +405,15 @@ class _PreviewList extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text('Vista previa de estudiantes',
-                    style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
+                child: Text('Vista previa de estudiantes', style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainer,
-                  borderRadius: BorderRadius.circular(999),
+                decoration: BoxDecoration(color: AppColors.surfaceContainer, borderRadius: BorderRadius.circular(999)),
+                child: Text(
+                  'Primeros ${rows.length}',
+                  style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant),
                 ),
-                child: Text('Primeros ${rows.length}',
-                    style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant)),
               ),
             ],
           ),
@@ -429,10 +422,7 @@ class _PreviewList extends StatelessWidget {
             Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(12),
-              ),
+              decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(12)),
               child: Row(
                 children: [
                   InitialsAvatar(initials: row.initials, size: 40),
@@ -441,11 +431,20 @@ class _PreviewList extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${row.name} · ${row.code}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppText.bodyLg.copyWith(color: AppColors.onSurface)),
-                        Text(row.email, style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+                        Text(
+                          row.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.bodyLg.copyWith(color: AppColors.onSurface),
+                        ),
+                        Text(row.code, style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+                        // Un correo no se debe partir a la mitad: si no cabe, termina en "...".
+                        Text(
+                          row.email,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
+                        ),
                       ],
                     ),
                   ),
@@ -475,10 +474,7 @@ class _ErrorRows extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.absentContainer,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: BoxDecoration(color: AppColors.absentContainer, borderRadius: BorderRadius.circular(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -489,8 +485,10 @@ class _ErrorRows extends StatelessWidget {
                 const Icon(Icons.warning_amber_rounded, color: AppColors.absent),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('Filas con errores (${errors.length})',
-                      style: AppText.titleMd.copyWith(color: AppColors.absent)),
+                  child: Text(
+                    'Filas con errores (${errors.length})',
+                    style: AppText.titleMd.copyWith(color: AppColors.absent),
+                  ),
                 ),
                 Icon(expanded ? Icons.expand_less : Icons.expand_more, color: AppColors.absent),
               ],
@@ -509,8 +507,11 @@ class _ErrorRows extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(error.isEmailError ? Icons.mail_lock_outlined : Icons.remove_circle_outline,
-                        size: 20, color: AppColors.absent),
+                    Icon(
+                      error.isEmailError ? Icons.mail_lock_outlined : Icons.remove_circle_outline,
+                      size: 20,
+                      color: AppColors.absent,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(

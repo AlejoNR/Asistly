@@ -10,6 +10,7 @@ import '../widgets/detail_app_bar.dart';
 import '../widgets/initials_avatar.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/status_chip.dart';
+import '../widgets/load_error.dart';
 
 /// Asistencia cerrada (mockup 19): porcentaje, gráfica y listas de presentes y ausentes.
 class ClosedSessionView extends StatelessWidget {
@@ -20,10 +21,14 @@ class ClosedSessionView extends StatelessWidget {
     final vm = Provider.of<ClosedSessionViewModel>(context);
     final course = vm.course;
 
-    if (vm.isLoading) {
-      return const Scaffold(
-        appBar: DetailAppBar(title: 'Asistencia cerrada'),
-        body: Center(child: CircularProgressIndicator()),
+    if (vm.isLoading || vm.error != null) {
+      return Scaffold(
+        appBar: const DetailAppBar(title: 'Asistencia cerrada'),
+        body: Center(
+          child: vm.error != null
+              ? LoadError(message: vm.error!, onRetry: vm.load)
+              : const CircularProgressIndicator(),
+        ),
       );
     }
 
@@ -49,13 +54,17 @@ class ClosedSessionView extends StatelessWidget {
                               color: AppColors.surfaceContainer,
                               borderRadius: BorderRadius.circular(999),
                             ),
-                            child: Text('Clase #${vm.session.number} concluida',
-                                style: AppText.labelMd.copyWith(color: AppColors.primaryContainer)),
+                            child: Text(
+                              'Clase #${vm.session.number} concluida',
+                              style: AppText.labelMd.copyWith(color: AppColors.primaryContainer),
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Flexible(
-                            child: Text(vm.dateLabel,
-                                style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+                            child: Text(
+                              vm.dateLabel,
+                              style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
+                            ),
                           ),
                         ],
                       ),
@@ -68,10 +77,7 @@ class ClosedSessionView extends StatelessWidget {
                 Container(
                   width: 56,
                   height: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceContainer,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                  decoration: BoxDecoration(color: AppColors.surfaceContainer, borderRadius: BorderRadius.circular(16)),
                   child: const Icon(Icons.lock_outline, color: AppColors.primary),
                 ),
               ],
@@ -89,20 +95,21 @@ class ClosedSessionView extends StatelessWidget {
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryFixed,
-                        borderRadius: BorderRadius.circular(8),
+                      decoration: BoxDecoration(color: AppColors.primaryFixed, borderRadius: BorderRadius.circular(8)),
+                      child: Text(
+                        '${vm.percentLabel} de asistencia',
+                        style: AppText.labelMd.copyWith(color: AppColors.primary),
                       ),
-                      child: Text('${vm.percentLabel} de asistencia',
-                          style: AppText.labelMd.copyWith(color: AppColors.primary)),
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
-                Row(
-                  children: [
+                // LayoutBuilder: con poco ancho, la dona va arriba y la leyenda debajo
+                // a todo lo ancho, en vez de apretar la leyenda al lado.
+                LayoutBuilder(
+                  builder: (context, constraints) {
                     // Dona: la parte azul son los presentes y la roja los ausentes.
-                    SizedBox(
+                    final donut = SizedBox(
                       width: 140,
                       height: 140,
                       child: Stack(
@@ -122,34 +129,39 @@ class ClosedSessionView extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text('${vm.total}', style: AppText.headlineLg.copyWith(color: AppColors.onSurface)),
-                              Text('ALUMNOS',
-                                  style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant, letterSpacing: 1)),
+                              Text(
+                                'ALUMNOS',
+                                style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant, letterSpacing: 1),
+                              ),
                             ],
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          _LegendRow(
-                            color: AppColors.primaryContainer,
-                            label: 'Presentes',
-                            value: vm.present.length,
-                            total: vm.total,
-                          ),
-                          const SizedBox(height: 8),
-                          _LegendRow(
-                            color: AppColors.error,
-                            label: 'Ausentes',
-                            value: vm.absent.length,
-                            total: vm.total,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    );
+                    final legend = Column(
+                      children: [
+                        _LegendRow(
+                          color: AppColors.primaryContainer,
+                          label: 'Presentes',
+                          value: vm.present.length,
+                          total: vm.total,
+                        ),
+                        const SizedBox(height: 8),
+                        _LegendRow(color: AppColors.error, label: 'Ausentes', value: vm.absent.length, total: vm.total),
+                      ],
+                    );
+
+                    if (constraints.maxWidth < 320) {
+                      return Column(children: [donut, const SizedBox(height: 16), legend]);
+                    }
+                    return Row(
+                      children: [
+                        donut,
+                        const SizedBox(width: 16),
+                        Expanded(child: legend),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -170,15 +182,14 @@ class ClosedSessionView extends StatelessWidget {
                         children: [
                           Text(record.name, style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
                           Text(group, style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
-                          if (record.isManual) ...[
-                            const SizedBox(height: 4),
-                            const StatusChip.manual(),
-                          ],
+                          if (record.isManual) ...[const SizedBox(height: 4), const StatusChip.manual()],
                         ],
                       ),
                     ),
-                    Text(DateFormatEs.time(record.markedAt),
-                        style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
+                    Text(
+                      DateFormatEs.time(record.markedAt),
+                      style: AppText.titleMd.copyWith(color: AppColors.onSurface),
+                    ),
                   ],
                 ),
               ),
@@ -214,9 +225,11 @@ class ClosedSessionView extends StatelessWidget {
             if (vm.absent.isEmpty)
               Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text('¡Asistieron todos los inscritos!',
-                    textAlign: TextAlign.center,
-                    style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant)),
+                child: Text(
+                  '¡Asistieron todos los inscritos!',
+                  textAlign: TextAlign.center,
+                  style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant),
+                ),
               ),
           ],
         ],
@@ -247,21 +260,27 @@ class _LegendRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-      ),
+      decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
-          Container(width: 14, height: 14, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+            width: 14,
+            height: 14,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
           const SizedBox(width: 8),
-          Expanded(child: Text(label, style: AppText.bodyMd.copyWith(color: AppColors.onSurface))),
+          Expanded(
+            child: Text(label, style: AppText.bodyMd.copyWith(color: AppColors.onSurface)),
+          ),
           Text.rich(
             TextSpan(
               text: '$value',
               style: AppText.titleLg.copyWith(color: color, fontWeight: FontWeight.w700),
               children: [
-                TextSpan(text: ' /$total', style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+                TextSpan(
+                  text: ' /$total',
+                  style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
+                ),
               ],
             ),
           ),
@@ -294,10 +313,12 @@ class _Tabs extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(label,
-                    style: AppText.labelLg.copyWith(
-                      color: selected ? AppColors.primaryContainer : AppColors.onSurfaceVariant,
-                    )),
+                Text(
+                  label,
+                  style: AppText.labelLg.copyWith(
+                    color: selected ? AppColors.primaryContainer : AppColors.onSurfaceVariant,
+                  ),
+                ),
                 const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
@@ -313,10 +334,7 @@ class _Tabs extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainer,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: BoxDecoration(color: AppColors.surfaceContainer, borderRadius: BorderRadius.circular(16)),
       child: Row(
         children: [
           tab(0, 'Presentes', vm.present.length, AppColors.primaryFixed, AppColors.primaryContainer),

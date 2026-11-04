@@ -13,6 +13,7 @@ class CourseStudentsViewModel extends BaseViewModel {
   }
 
   bool isLoading = true;
+  String? error;
   Course? course;
   List<CourseStudent> _all = [];
 
@@ -23,9 +24,14 @@ class CourseStudentsViewModel extends BaseViewModel {
 
   Future<void> load() async {
     isLoading = true;
+    error = null;
     notify();
-    course = await _repo.getCourse(courseId);
-    _all = await _repo.getCourseStudents(courseId);
+    try {
+      course = await _repo.getCourse(courseId);
+      _all = await _repo.getCourseStudents(courseId);
+    } catch (e) {
+      error = errorMessage(e);
+    }
     isLoading = false;
     notify();
   }
@@ -59,9 +65,7 @@ class CourseStudentsViewModel extends BaseViewModel {
     final text = query.trim().toLowerCase();
     final filtered = <CourseStudent>[];
     for (final student in list) {
-      if (text.isEmpty ||
-          student.name.toLowerCase().contains(text) ||
-          student.code.contains(text)) {
+      if (text.isEmpty || student.name.toLowerCase().contains(text) || student.code.contains(text)) {
         filtered.add(student);
       }
     }
@@ -98,27 +102,49 @@ class CourseStudentsViewModel extends BaseViewModel {
   }
 
   // ---------- Acciones ----------
+  // Cada acción devuelve null si salió bien, o el mensaje de error para mostrarlo.
 
-  Future<void> accept(CourseStudent student) async {
-    await _repo.setStudentStatus(courseId, student.uid, EnrollmentStatus.enrolled);
-    await load();
-  }
-
-  Future<void> reject(CourseStudent student) async {
-    await _repo.rejectRequest(courseId, student.uid);
-    await load();
-  }
-
-  Future<void> acceptAll() async {
-    for (final student in pending) {
+  Future<String?> accept(CourseStudent student) async {
+    try {
       await _repo.setStudentStatus(courseId, student.uid, EnrollmentStatus.enrolled);
+    } catch (e) {
+      return errorMessage(e);
     }
     await load();
+    return null;
+  }
+
+  Future<String?> reject(CourseStudent student) async {
+    try {
+      await _repo.rejectRequest(courseId, student.uid);
+    } catch (e) {
+      return errorMessage(e);
+    }
+    await load();
+    return null;
+  }
+
+  Future<String?> acceptAll() async {
+    try {
+      for (final student in pending) {
+        await _repo.setStudentStatus(courseId, student.uid, EnrollmentStatus.enrolled);
+      }
+    } catch (e) {
+      await load();
+      return errorMessage(e);
+    }
+    await load();
+    return null;
   }
 
   /// Retirar: la inscripción pasa a "retirado"; nunca se borran sus asistencias.
-  Future<void> withdraw(CourseStudent student) async {
-    await _repo.setStudentStatus(courseId, student.uid, EnrollmentStatus.withdrawn);
+  Future<String?> withdraw(CourseStudent student) async {
+    try {
+      await _repo.setStudentStatus(courseId, student.uid, EnrollmentStatus.withdrawn);
+    } catch (e) {
+      return errorMessage(e);
+    }
     await load();
+    return null;
   }
 }

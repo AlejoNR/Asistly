@@ -42,5 +42,133 @@ service cloud.firestore {
       allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
       allow update, delete: if false;
     }
+
+    // ================= Cursos, sesiones y asistencia (Asistly) =================
+    // Solo se AGREGAN reglas: users y devices quedan igual para no romper AsistlyLogin.
+
+    function isTeacher() {
+      return signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+
+    function course(courseId) {
+      return get(/databases/$(database)/documents/cursos/$(courseId)).data;
+    }
+
+    function ownsCourse(courseId) {
+      return signedIn() && course(courseId).docenteId == request.auth.uid;
+    }
+
+    // Hora de Colombia (UTC-5, sin horario de verano) según el reloj del servidor.
+    function bogotaNow() {
+      return request.time - duration.value(5, 'h');
+    }
+
+    // "08:30" -> 510 minutos desde la medianoche.
+    function minutesOf(hhmm) {
+      let parts = hhmm.split(':');
+      return int(parts[0]) * 60 + int(parts[1]);
+    }
+
+    // La fecha "2026-11-03" es la de hoy en Colombia.
+    function isToday(dateKey) {
+      let t = bogotaNow();
+      let parts = dateKey.split('-');
+      return int(parts[0]) == t.year() && int(parts[1]) == t.month() && int(parts[2]) == t.day();
+    }
+
+    // Desde 15 minutos antes de la hora de inicio hasta la hora de fin (especificación, sección 5).
+    function inClassWindow(c) {
+      let t = bogotaNow();
+      let now = t.hours() * 60 + t.minutes();
+      return now >= minutesOf(c.horaInicio) - 15 && now <= minutesOf(c.horaFin);
+    }
+
+    match /cursos/{courseId} {
+      // Cualquier usuario con sesión puede leer cursos: el estudiante los busca por código.
+      allow read: if signedIn();
+      allow create: if isTeacher()
+        && request.resource.data.docenteId == request.auth.uid
+        && request.resource.data.codigoInscripcion is string;
+      // El docente edita su curso, pero no puede cambiar de dueño ni de código.
+      allow update: if signedIn()
+        && resource.data.docenteId == request.auth.uid
+        && request.resource.data.docenteId == resource.data.docenteId
+        && request.resource.data.codigoInscripcion == resource.data.codigoInscripcion;
+      allow delete: if false;
+
+      // Lista oficial importada: solo la ve y la edita el docente del curso.
+      match /listaOficial/{studentCode} {
+        allow read, write: if ownsCourse(courseId);
+      }
+
+      // Inscripciones: el docente acepta, retira o rechaza; el estudiante ve la suya.
+      // (Unirse a un curso lo agrega la Fase 2, con las pantallas del estudiante.)
+      match /inscripciones/{uid} {
+        allow read: if ownsCourse(courseId) || (signedIn() && request.auth.uid == uid);
+        allow update: if ownsCourse(courseId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['estado', 'origen', 'retiradoPor'])
+          && request.resource.data.estado in ['inscrito', 'retirado'];
+        // Rechazar = borrar una solicitud pendiente.
+        allow delete: if ownsCourse(courseId) && resource.data.estado == 'pendiente';
+        allow create: if false;
+      }
+    }
+
+    match /sesiones/{sessionId} {
+      allow read: if signedIn();
+      // Abrir la clase: el docente del curso, con el id "{cursoId}_{fecha de hoy}"
+      // (una por día), hora del servidor y dentro del horario de la clase.
+      allow create: if isTeacher()
+        && request.resource.data.docenteId == request.auth.uid
+        && ownsCourse(request.resource.data.cursoId)
+        && sessionId == request.resource.data.cursoId + '_' + request.resource.data.fecha
+        && isToday(request.resource.data.fecha)
+        && inClassWindow(course(request.resource.data.cursoId))
+        && request.resource.data.abierta == true
+        && request.resource.data.inicio == request.time;
+      // Cerrar la clase y guardar los totales; no se puede cambiar de curso, fecha ni número.
+      allow update: if signedIn()
+        && resource.data.docenteId == request.auth.uid
+        && request.resource.data.docenteId == resource.data.docenteId
+        && request.resource.data.cursoId == resource.data.cursoId
+        && request.resource.data.fecha == resource.data.fecha
+        && request.resource.data.numeroClase == resource.data.numeroClase
+        && request.resource.data.inicio == resource.data.inicio;
+      allow delete: if false;
+
+      // Secreto y códigos vigentes: solo el docente de la sesión. getAfter() porque el
+      // secreto se guarda en el mismo batch que crea la sesión.
+      match /privado/{docId} {
+        allow read: if signedIn()
+          && get(/databases/$(database)/documents/sesiones/$(sessionId)).data.docenteId == request.auth.uid;
+        allow write: if signedIn()
+          && getAfter(/databases/$(database)/documents/sesiones/$(sessionId)).data.docenteId == request.auth.uid;
+      }
+
+      // Asistencias: el docente ve todas y marca las manuales; el estudiante ve la suya.
+      // (El registro del estudiante con QR + Bluetooth lo agrega la Fase 2.)
+      match /asistencias/{uid} {
+        allow read: if signedIn() && (
+          get(/databases/$(database)/documents/sesiones/$(sessionId)).data.docenteId == request.auth.uid
+          || request.auth.uid == uid);
+        allow create: if signedIn()
+          && get(/databases/$(database)/documents/sesiones/$(sessionId)).data.docenteId == request.auth.uid
+          && get(/databases/$(database)/documents/sesiones/$(sessionId)).data.abierta == true
+          && request.resource.data.metodo == 'manual'
+          && request.resource.data.marcadoPor == request.auth.uid
+          && request.resource.data.estado == 'presente';
+        allow update, delete: if false;
+      }
+
+      // Reportes de falla: el docente los ve. (El estudiante los envía en la Fase 2.)
+      match /reportesFalla/{uid} {
+        allow read: if signedIn() && (
+          get(/databases/$(database)/documents/sesiones/$(sessionId)).data.docenteId == request.auth.uid
+          || request.auth.uid == uid);
+        allow write: if false;
+      }
+    }
   }
 }

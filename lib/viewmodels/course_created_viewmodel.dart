@@ -38,7 +38,8 @@ class CourseCreatedViewModel extends BaseViewModel {
   /// Abre el menú del celular para compartir (WhatsApp, correo...).
   /// Usa el paquete share_plus.
   Future<void> shareCode() async {
-    final text = 'Únete a ${course.name} (${course.group}) en Asistly '
+    final text =
+        'Únete a ${course.name} (${course.group}) en Asistly '
         'con el código: ${course.enrollCode}';
     await SharePlus.instance.share(ShareParams(text: text));
   }

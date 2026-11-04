@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../viewmodels/teacher_home_viewmodel.dart';
 import '../widgets/app_card.dart';
 import '../widgets/status_chip.dart';
+import '../widgets/load_error.dart';
 
 /// Home del docente (mockup 09): saludo, cursos activos y botón "+" para crear un curso.
 class TeacherHomeView extends StatelessWidget {
@@ -24,10 +25,14 @@ class TeacherHomeView extends StatelessWidget {
     ];
 
     if (vm.isLoading) {
-      children.add(const Padding(
-        padding: EdgeInsets.only(top: 48),
-        child: Center(child: CircularProgressIndicator()),
-      ));
+      children.add(
+        const Padding(
+          padding: EdgeInsets.only(top: 48),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    } else if (vm.error != null) {
+      children.add(LoadError(message: vm.error!, onRetry: vm.loadCourses));
     } else {
       for (final course in vm.courses) {
         children.add(_TeacherCourseCard(course: course, onReturn: vm.loadCourses));
@@ -40,10 +45,7 @@ class TeacherHomeView extends StatelessWidget {
       backgroundColor: AppColors.surface,
       body: RefreshIndicator(
         onRefresh: vm.loadCourses, // Deslizar hacia abajo recarga los cursos.
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-          children: children,
-        ),
+        child: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 96), children: children),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -104,17 +106,16 @@ class _WelcomeCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Hola, $name',
-                  style: AppText.headlineMd.copyWith(
-                    color: AppColors.onPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppText.headlineMd.copyWith(color: AppColors.onPrimary, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 6),
                 Row(
                   children: [
                     const Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.onPrimaryContainer),
                     const SizedBox(width: 6),
-                    Text(date, style: AppText.bodyMd.copyWith(color: AppColors.onPrimaryContainer)),
+                    Flexible(
+                      child: Text(date, style: AppText.bodyMd.copyWith(color: AppColors.onPrimaryContainer)),
+                    ),
                   ],
                 ),
               ],
@@ -142,10 +143,7 @@ class _SectionHeader extends StatelessWidget {
         ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceContainer,
-            borderRadius: BorderRadius.circular(999),
-          ),
+          decoration: BoxDecoration(color: AppColors.surfaceContainer, borderRadius: BorderRadius.circular(999)),
           child: Text(
             count == 1 ? '1 materia' : '$count materias',
             style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant),
@@ -172,18 +170,20 @@ class _TeacherCourseCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Wrap: si el nombre y el chip "Clase en curso" caben, van en la misma línea
+          // (como en el mockup); si no, el chip baja en vez de partir el nombre ("Programació n").
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(course.name, style: AppText.titleLg.copyWith(color: AppColors.primary)),
-                    const SizedBox(height: 2),
-                    Text(course.group, style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant)),
-                  ],
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(course.name, style: AppText.titleLg.copyWith(color: AppColors.primary)),
+                  const SizedBox(height: 2),
+                  Text(course.group, style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant)),
+                ],
               ),
               if (isLive) const StatusChip.live(),
             ],

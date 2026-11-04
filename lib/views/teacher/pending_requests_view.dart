@@ -5,11 +5,19 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../viewmodels/course_students_viewmodel.dart';
 import '../widgets/request_card.dart';
+import '../widgets/load_error.dart';
+import '../widgets/common.dart';
 
 /// Solicitudes pendientes (mockup 15): estudiantes que se unieron con el código
 /// pero no están en la lista oficial. El docente los acepta o los rechaza.
 class PendingRequestsView extends StatelessWidget {
   const PendingRequestsView({super.key});
+
+  /// Espera una acción y, si devolvió un error, lo muestra abajo.
+  Future<void> _run(BuildContext context, Future<String?> action) async {
+    final error = await action;
+    if (error != null && context.mounted) showAppSnackBar(context, error);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,10 +40,16 @@ class PendingRequestsView extends StatelessWidget {
       ),
       body: vm.isLoading && course == null
           ? const Center(child: CircularProgressIndicator())
+          : vm.error != null
+          ? Center(child: LoadError(message: vm.error!, onRetry: vm.load))
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               children: [
-                Row(
+                // Wrap: si los dos chips no caben en una línea, el segundo baja.
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     if (course != null)
                       Container(
@@ -44,18 +58,21 @@ class PendingRequestsView extends StatelessWidget {
                           color: AppColors.primaryFixed,
                           borderRadius: BorderRadius.circular(999),
                         ),
-                        child: Text('${course.group} · ${course.room}',
-                            style: AppText.labelMd.copyWith(color: AppColors.primary)),
+                        child: Text(
+                          '${course.group} · ${course.room}',
+                          style: AppText.labelMd.copyWith(color: AppColors.primary),
+                        ),
                       ),
-                    const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: AppColors.tertiaryFixed,
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: Text('${pending.length} pendientes',
-                          style: AppText.labelMd.copyWith(color: AppColors.onTertiaryFixed)),
+                      child: Text(
+                        '${pending.length} pendientes',
+                        style: AppText.labelMd.copyWith(color: AppColors.onTertiaryFixed),
+                      ),
                     ),
                   ],
                 ),
@@ -65,12 +82,11 @@ class PendingRequestsView extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: Text('Solicitudes recibidas',
-                          style: AppText.titleLg.copyWith(color: AppColors.onSurface)),
+                      child: Text('Solicitudes recibidas', style: AppText.titleLg.copyWith(color: AppColors.onSurface)),
                     ),
                     if (pending.isNotEmpty)
                       FilledButton.icon(
-                        onPressed: vm.acceptAll,
+                        onPressed: () => _run(context, vm.acceptAll()),
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.secondaryContainer,
                           foregroundColor: AppColors.onSecondaryContainer,
@@ -88,8 +104,8 @@ class PendingRequestsView extends StatelessWidget {
                   for (final student in pending) ...[
                     RequestCard(
                       student: student,
-                      onAccept: () => vm.accept(student),
-                      onReject: () => vm.reject(student),
+                      onAccept: () => _run(context, vm.accept(student)),
+                      onReject: () => _run(context, vm.reject(student)),
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -121,10 +137,7 @@ class _InfoBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(16)),
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -147,8 +160,10 @@ class _InfoBanner extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Estudiantes agregados por código',
-                              style: AppText.titleLg.copyWith(color: AppColors.onSurface)),
+                          Text(
+                            'Estudiantes agregados por código',
+                            style: AppText.titleLg.copyWith(color: AppColors.onSurface),
+                          ),
                           const SizedBox(height: 4),
                           Text(
                             'Estos estudiantes ingresaron el código del curso, pero no están en la '

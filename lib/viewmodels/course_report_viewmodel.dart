@@ -18,15 +18,28 @@ class CourseReportViewModel extends BaseViewModel {
   static const goal = 75;
 
   bool isLoading = true;
+  String? error;
   Course? course;
   List<ClassSession> sessions = []; // De la más antigua a la más reciente (C1, C2...)
   List<CourseStudent> students = []; // De menor a mayor asistencia
   bool ascending = true;
 
   Future<void> load() async {
-    course = await _repo.getCourse(courseId);
-    final allSessions = await _repo.getCourseSessions(courseId);
-    final allStudents = await _repo.getCourseStudents(courseId);
+    isLoading = true;
+    error = null;
+    notify();
+    List<ClassSession> allSessions;
+    List<CourseStudent> allStudents;
+    try {
+      course = await _repo.getCourse(courseId);
+      allSessions = await _repo.getCourseSessions(courseId);
+      allStudents = await _repo.getCourseStudents(courseId);
+    } catch (e) {
+      error = errorMessage(e);
+      isLoading = false;
+      notify();
+      return;
+    }
 
     // El repositorio las da de la más reciente a la más antigua; la gráfica va al revés.
     sessions = allSessions.reversed.toList();

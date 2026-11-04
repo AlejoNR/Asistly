@@ -17,6 +17,7 @@ class ManualAttendanceViewModel extends BaseViewModel {
 
   bool isLoading = true;
   bool isSaving = false;
+  String? error;
   List<CourseStudent> pending = [];
   final Map<String, DateTime> _reportTimes = {}; // uid -> hora del reporte de falla
   final Set<String> selected = {};
@@ -25,12 +26,17 @@ class ManualAttendanceViewModel extends BaseViewModel {
 
   Future<void> load() async {
     isLoading = true;
+    error = null;
     notify();
-    pending = await _repo.getPendingStudents(session.id, session.course.id);
-    final reports = await _repo.getFailReports(session.id);
-    _reportTimes.clear();
-    for (final report in reports) {
-      _reportTimes[report.uid] = report.reportedAt;
+    try {
+      pending = await _repo.getPendingStudents(session.id, session.course.id);
+      final reports = await _repo.getFailReports(session.id);
+      _reportTimes.clear();
+      for (final report in reports) {
+        _reportTimes[report.uid] = report.reportedAt;
+      }
+    } catch (e) {
+      error = errorMessage(e);
     }
     isLoading = false;
     notify();
@@ -100,8 +106,16 @@ class ManualAttendanceViewModel extends BaseViewModel {
     }
     if (chosen.isEmpty) return 0;
     isSaving = true;
+    error = null;
     notify();
-    await _repo.markManual(session.id, chosen, reason);
+    try {
+      await _repo.markManual(session.id, chosen, reason);
+    } catch (e) {
+      error = errorMessage(e);
+      isSaving = false;
+      notify();
+      return 0;
+    }
     isSaving = false;
     notify();
     return chosen.length;

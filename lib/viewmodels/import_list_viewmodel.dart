@@ -16,6 +16,7 @@ class ImportListViewModel extends BaseViewModel {
   ImportPreview? preview; // null hasta que se elige un archivo
   bool isReading = false;
   bool isImporting = false;
+  String? error; // Error al leer el archivo o al guardar
   bool showErrors = true; // La sección "Filas con errores" se puede plegar
 
   /// Los primeros 3 estudiantes para la vista previa.
@@ -30,12 +31,18 @@ class ImportListViewModel extends BaseViewModel {
     notify();
   }
 
-  /// Elegir el archivo. POR AHORA ES SIMULADO: carga un archivo de ejemplo.
-  /// Más adelante aquí se abrirá el selector de archivos y se leerá el Excel/CSV.
+  /// Abre el selector de archivos y lee el Excel/CSV elegido.
+  /// Si la persona cancela, se deja lo que había.
   Future<void> pickFile() async {
     isReading = true;
+    error = null;
     notify();
-    preview = await _repo.readSampleOfficialList();
+    try {
+      final result = await _repo.readOfficialListFile();
+      if (result != null) preview = result;
+    } catch (e) {
+      error = errorMessage(e);
+    }
     isReading = false;
     notify();
   }
@@ -45,13 +52,20 @@ class ImportListViewModel extends BaseViewModel {
     notify();
   }
 
-  /// Guarda la lista. Devuelve cuántos estudiantes se agregaron como "Sin unirse".
-  Future<int> import() async {
+  /// Guarda la lista. Devuelve cuántos estudiantes nuevos se agregaron,
+  /// o null si falló (el mensaje queda en [error]).
+  Future<int?> import() async {
     final current = preview;
     if (current == null) return 0;
     isImporting = true;
+    error = null;
     notify();
-    final added = await _repo.importOfficialList(courseId, current.validRows);
+    int? added;
+    try {
+      added = await _repo.importOfficialList(courseId, current.validRows);
+    } catch (e) {
+      error = errorMessage(e);
+    }
     isImporting = false;
     notify();
     return added;

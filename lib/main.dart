@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'services/auth_repository.dart';
 import 'services/course_repository.dart';
+import 'services/fake_course_repository.dart';
+import 'services/fake_session_repository.dart';
 import 'services/session_repository.dart';
 import 'theme/app_theme.dart';
 import 'models/active_session.dart';
@@ -63,19 +65,29 @@ void main() async {
 class AppState extends StatelessWidget {
   /// Pantalla con la que arranca la app: 'splash' normalmente, 'demo' en el modo demo.
   final String initialRoute;
-  const AppState({super.key, this.initialRoute = 'splash'});
+
+  /// true en el modo demo: usa los repositorios de prueba (datos inventados en memoria)
+  /// en vez de Firestore.
+  final bool demo;
+
+  const AppState({super.key, this.initialRoute = 'splash', this.demo = false});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         Provider(create: (_) => AuthRepository()),
-        Provider(create: (_) => CourseRepository()),
+        // <CourseRepository>: las pantallas siempre piden un CourseRepository,
+        // sin saber si es el real o el de prueba (los dos tienen los mismos métodos).
+        Provider<CourseRepository>(
+          create: (_) => demo ? FakeCourseRepository() : CourseRepository(),
+        ),
         // El de sesiones usa el de cursos (para los estudiantes y el historial).
-        Provider(
-          create: (context) => SessionRepository(
-            Provider.of<CourseRepository>(context, listen: false),
-          ),
+        Provider<SessionRepository>(
+          create: (context) {
+            final courses = Provider.of<CourseRepository>(context, listen: false);
+            return demo ? FakeSessionRepository(courses) : SessionRepository(courses);
+          },
         ),
       ],
       child: MyApp(initialRoute: initialRoute),
