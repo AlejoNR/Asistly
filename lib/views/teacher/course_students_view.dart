@@ -216,6 +216,23 @@ class CourseStudentsView extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                 ],
+                if (vm.currentTab == 0 && students.isNotEmpty) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text('LISTA GENERAL (${students.length})',
+                            style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant, letterSpacing: 0.6)),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(vm.sortByAttendance ? 'Menor asistencia' : 'Orden alfabético',
+                            textAlign: TextAlign.end,
+                            style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 if (students.isEmpty)
                   const _EmptyResult()
                 else

@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../util/date_format.dart';
 import '../../viewmodels/student_history_viewmodel.dart';
 import '../widgets/app_card.dart';
+import '../widgets/attendance_legend.dart';
 import '../widgets/load_error.dart';
 import '../widgets/percent_ring.dart';
 import '../widgets/status_chip.dart';
@@ -124,13 +125,27 @@ class _SummaryCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Asistencia general', style: AppText.titleLg.copyWith(color: AppColors.primary)),
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(color: AppColors.tertiaryFixedDim, shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text('DESEMPEÑO SEMESTRAL',
+                          style: AppText.labelSm.copyWith(color: AppColors.onSurfaceVariant, letterSpacing: 0.6)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text('Asistencia General', style: AppText.titleLg.copyWith(color: AppColors.primary)),
                 const SizedBox(height: 6),
                 Text('${vm.percent}%',
                     style: AppText.headlineLg.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),
-                Text('${vm.presentCount} presentes · ${vm.absentCount} ausentes',
-                    style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+                AttendanceLegend(present: vm.presentCount, absent: vm.absentCount),
               ],
             ),
           ),

@@ -1,0 +1,12 @@
+{
+  "name": "asistly-firestore-tests",
+  "private": true,
+  "description": "Pruebas de firestore.rules contra el emulador local. Ejecutar con run.ps1.",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project demo-asistly \"node rules.test.js\""
+  },
+  "dependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "firebase": "^13.2.0"
+  }
+}

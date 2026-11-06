@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../util/date_format.dart';
 import '../../viewmodels/student_course_detail_viewmodel.dart';
 import '../widgets/app_card.dart';
+import '../widgets/attendance_legend.dart';
 import '../widgets/common.dart';
 import '../widgets/detail_app_bar.dart';
 import '../widgets/leave_course_sheet.dart';
@@ -147,12 +148,20 @@ class _ScheduleCard extends StatelessWidget {
                     style: AppText.labelMd.copyWith(color: AppColors.onPrimary, fontWeight: FontWeight.w700)),
               ),
               const SizedBox(width: 12),
+              // Wrap: el aula va a la derecha si cabe; si no, baja completa y no parte la hora.
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     Text(course.timeLabel, style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
-                    Text(course.room, style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+                    StatusChip(
+                      label: course.room,
+                      background: AppColors.surfaceContainerHigh,
+                      foreground: AppColors.onSurfaceVariant,
+                    ),
                   ],
                 ),
               ),
@@ -202,17 +211,30 @@ class _AttendanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.check_circle, color: AppColors.primaryContainer),
-              const SizedBox(width: 10),
-              Expanded(child: Text('Mi asistencia', style: AppText.titleLg.copyWith(color: AppColors.onSurface))),
-              StatusChip(
-                label: '${vm.records.length} ${vm.records.length == 1 ? 'clase' : 'clases'}',
-                background: AppColors.surfaceContainer,
-                foreground: AppColors.onSurfaceVariant,
-              ),
-            ],
+          // SizedBox + Wrap: el chip baja de línea si no cabe, en vez de partir "asistencia".
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.check_circle, color: AppColors.primaryContainer),
+                    const SizedBox(width: 10),
+                    Text('Mi asistencia', style: AppText.titleLg.copyWith(color: AppColors.onSurface)),
+                  ],
+                ),
+                StatusChip(
+                  label: '${vm.records.length} ${vm.records.length == 1 ? 'clase cursada' : 'clases cursadas'}',
+                  background: AppColors.surfaceContainer,
+                  foreground: AppColors.onSurfaceVariant,
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           Container(
@@ -231,8 +253,7 @@ class _AttendanceCard extends StatelessWidget {
                                 style: AppText.headlineLg.copyWith(
                                     color: AppColors.primaryContainer, fontWeight: FontWeight.w700)),
                             const SizedBox(height: 4),
-                            Text('${vm.presentCount} presentes · ${vm.absentCount} ausentes',
-                                style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+                            AttendanceLegend(present: vm.presentCount, absent: vm.absentCount),
                           ],
                         ),
                       ),

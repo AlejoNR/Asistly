@@ -27,7 +27,7 @@ class PermissionsView extends StatelessWidget {
                 width: 88,
                 height: 88,
                 decoration: const BoxDecoration(color: AppColors.surfaceContainer, shape: BoxShape.circle),
-                child: const Icon(Icons.shield_outlined, size: 40, color: AppColors.primary),
+                child: const Icon(Icons.security, size: 40, color: AppColors.primary),
               ),
             ),
             const SizedBox(height: 16),

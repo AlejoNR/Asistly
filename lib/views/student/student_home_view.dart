@@ -32,7 +32,10 @@ class StudentHomeView extends StatelessWidget {
 
     if (vm.isLoading) {
       children.add(
-        const Padding(padding: EdgeInsets.only(top: 32), child: Center(child: CircularProgressIndicator())),
+        const Padding(
+          padding: EdgeInsets.only(top: 32),
+          child: Center(child: CircularProgressIndicator()),
+        ),
       );
     } else if (vm.error != null) {
       children.add(LoadError(message: vm.error!, onRetry: vm.load));
@@ -85,11 +88,15 @@ class _WelcomeCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(vm.todayLabel.toUpperCase(),
-                          style: AppText.labelMd.copyWith(color: AppColors.secondaryContainer, letterSpacing: 0.6)),
+                      Text(
+                        vm.todayLabel.toUpperCase(),
+                        style: AppText.labelMd.copyWith(color: AppColors.secondaryContainer, letterSpacing: 0.6),
+                      ),
                       const SizedBox(height: 6),
-                      Text('¡Hola, ${vm.greetingName}!',
-                          style: AppText.headlineMd.copyWith(color: AppColors.onPrimary, fontWeight: FontWeight.w700)),
+                      Text(
+                        '¡Hola, ${vm.greetingName}!',
+                        style: AppText.headlineMd.copyWith(color: AppColors.onPrimary, fontWeight: FontWeight.w700),
+                      ),
                       if (vm.semesterLabel.isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Text(vm.semesterLabel, style: AppText.bodyMd.copyWith(color: AppColors.secondaryContainer)),
@@ -129,8 +136,10 @@ class _PlainGreeting extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Hola, ${vm.greetingName}',
-                style: AppText.headlineMd.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+            Text(
+              'Hola, ${vm.greetingName}',
+              style: AppText.headlineMd.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 4),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -204,8 +213,11 @@ class _NoClassCard extends StatelessWidget {
             child: const Icon(Icons.schedule, size: 30, color: AppColors.secondary),
           ),
           const SizedBox(height: 12),
-          Text('No hay clase en curso',
-              textAlign: TextAlign.center, style: AppText.titleLg.copyWith(color: AppColors.onSurface)),
+          Text(
+            'No hay clase en curso',
+            textAlign: TextAlign.center,
+            style: AppText.titleLg.copyWith(color: AppColors.onSurface),
+          ),
           const SizedBox(height: 6),
           Text(
             'Cuando tu docente abra la asistencia aparecerá aquí.${detail.isEmpty ? '' : ' $detail'}',
@@ -238,62 +250,117 @@ class _LiveClassCard extends StatelessWidget {
     final timeIsUp = vm.timeIsUp(open);
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppColors.tertiaryFixedDim,
         borderRadius: BorderRadius.circular(20),
         boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              StatusChip(
-                label: 'CLASE EN CURSO',
-                background: AppColors.onTertiaryFixed.withValues(alpha: 0.12),
-                foreground: AppColors.primary,
-                dotColor: AppColors.primary,
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(color: AppColors.tertiaryFixed, borderRadius: BorderRadius.circular(999)),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+          // QR de fondo muy tenue, como en el mockup.
+          Positioned(
+            right: -10,
+            top: 44,
+            child: Icon(Icons.qr_code_2, size: 120, color: AppColors.primary.withValues(alpha: 0.06)),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    const Icon(Icons.timer_outlined, size: 18, color: AppColors.primary),
-                    const SizedBox(width: 6),
-                    Text('Cierra en ${vm.remainingLabel(open)}',
-                        style: AppText.labelMd.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                    StatusChip(
+                      label: 'CLASE EN CURSO',
+                      background: AppColors.onTertiaryFixed.withValues(alpha: 0.12),
+                      foreground: AppColors.primary,
+                      dotColor: AppColors.primary,
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.tertiaryFixed,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.timer_outlined, size: 18, color: AppColors.primary),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Cierra en ${vm.remainingLabel(open)}',
+                            style: AppText.labelMd.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(course.name, style: AppText.headlineSm.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 6),
-          Text(
-            '${course.room} · ${course.teacherName} · ${course.timeLabel}',
-            style: AppText.bodyMd.copyWith(color: AppColors.primary),
-          ),
-          const SizedBox(height: 18),
-          if (open.alreadyMarked)
-            const _ScanButton(label: 'Ya registraste tu asistencia', icon: Icons.check_circle_outline, onPressed: null)
-          else if (timeIsUp)
-            const _ScanButton(label: 'Se acabó el tiempo para registrarse', icon: Icons.timer_off_outlined, onPressed: null)
-          else
-            _ScanButton(
-              label: 'Escanear QR de asistencia',
-              icon: Icons.qr_code_scanner,
-              onPressed: () => _start(context),
+                const SizedBox(height: 14),
+                Text(
+                  course.name,
+                  style: AppText.headlineSm.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 4,
+                  children: [
+                    _LiveInfo(icon: Icons.meeting_room_outlined, text: course.room),
+                    _LiveInfo(icon: Icons.badge_outlined, text: course.teacherName),
+                    _LiveInfo(icon: Icons.schedule, text: course.timeLabel),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                if (open.alreadyMarked)
+                  const _ScanButton(
+                    label: 'Ya registraste tu asistencia',
+                    icon: Icons.check_circle_outline,
+                    onPressed: null,
+                  )
+                else if (timeIsUp)
+                  const _ScanButton(
+                    label: 'Se acabó el tiempo para registrarse',
+                    icon: Icons.timer_off_outlined,
+                    onPressed: null,
+                  )
+                else
+                  _ScanButton(
+                    label: 'Escanear QR de asistencia',
+                    icon: Icons.qr_code_scanner,
+                    onPressed: () => _start(context),
+                  ),
+              ],
             ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// Dato de la clase con su ícono, en azul oscuro sobre el amarillo.
+class _LiveInfo extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _LiveInfo({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 18, color: AppColors.primary),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(text, style: AppText.bodyMd.copyWith(color: AppColors.primary)),
+        ),
+      ],
     );
   }
 }
@@ -318,8 +385,10 @@ class _SectionHeader extends StatelessWidget {
           children: [
             Text('Mis clases', style: AppText.titleLg.copyWith(color: AppColors.primary)),
             const SizedBox(width: 8),
-            Text('($count ${count == 1 ? 'inscrita' : 'inscritas'})',
-                style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+            Text(
+              '($count ${count == 1 ? 'inscrita' : 'inscritas'})',
+              style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
+            ),
           ],
         ),
         OutlinedButton.icon(
@@ -350,11 +419,17 @@ class _EmptyCourses extends StatelessWidget {
         children: [
           const Icon(Icons.menu_book_outlined, size: 48, color: AppColors.outline),
           const SizedBox(height: 12),
-          Text('Aún no tienes cursos',
-              textAlign: TextAlign.center, style: AppText.titleLg.copyWith(color: AppColors.onSurface)),
+          Text(
+            'Aún no tienes cursos',
+            textAlign: TextAlign.center,
+            style: AppText.titleLg.copyWith(color: AppColors.onSurface),
+          ),
           const SizedBox(height: 6),
-          Text('Pídele el código del curso a tu docente para unirte.',
-              textAlign: TextAlign.center, style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant)),
+          Text(
+            'Pídele el código del curso a tu docente para unirte.',
+            textAlign: TextAlign.center,
+            style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant),
+          ),
           const SizedBox(height: 20),
           PrimaryButton(label: 'Unirme a un curso', leadingIcon: Icons.add, onPressed: onJoin, radius: 14),
         ],
@@ -394,7 +469,9 @@ class _StudentCourseCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: Text(course.name, style: AppText.titleLg.copyWith(color: AppColors.onSurface))),
+              Expanded(
+                child: Text(course.name, style: AppText.titleLg.copyWith(color: AppColors.onSurface)),
+              ),
               if (!item.isPending) ...[
                 const SizedBox(width: 8),
                 StatusChip(
@@ -445,7 +522,9 @@ class _InfoLine extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: AppColors.secondary),
         const SizedBox(width: 6),
-        Expanded(child: Text(text, style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant))),
+        Expanded(
+          child: Text(text, style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant)),
+        ),
       ],
     );
   }

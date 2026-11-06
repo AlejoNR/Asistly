@@ -34,8 +34,29 @@ class AttendanceDoneView extends StatelessWidget {
         backgroundColor: AppColors.surface,
         body: SafeArea(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: const BoxDecoration(color: AppColors.surfaceContainer, shape: BoxShape.circle),
+                    child: const Icon(Icons.school_outlined, color: AppColors.primary),
+                  ),
+                  const Spacer(),
+                  Flexible(
+                    flex: 3,
+                    child: StatusChip(
+                      label: 'Semestre ${course.semester}',
+                      background: AppColors.surfaceContainerLow,
+                      foreground: AppColors.onSurfaceVariant,
+                      dotColor: AppColors.tertiaryFixedDim,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               Center(
                 child: Container(
                   width: 140,
