@@ -132,4 +132,22 @@ class Course {
 
   /// "Programación Móvil – Grupo 2"
   String get fullName => '$name – $group';
+
+  /// Próximo inicio de clase a partir de [now]. Una clase que ya empezó pero no
+  /// ha terminado cuenta como la próxima. Devuelve null si el curso no tiene días.
+  DateTime? nextClassAfter(DateTime now) {
+    for (var i = 0; i < 8; i++) {
+      final day = now.add(Duration(days: i));
+      if (!days.contains(day.weekday)) continue;
+      final start = _atTime(day, startTime);
+      if (now.isBefore(_atTime(day, endTime))) return start;
+    }
+    return null;
+  }
+
+  /// Convierte "08:00" en un DateTime de ese día.
+  DateTime _atTime(DateTime day, String hhmm) {
+    final parts = hhmm.split(':');
+    return DateTime(day.year, day.month, day.day, int.parse(parts[0]), int.parse(parts[1]));
+  }
 }

@@ -7,14 +7,27 @@ import '../models/attendance_record.dart';
 import '../models/class_session.dart';
 import '../models/course.dart';
 import '../models/course_student.dart';
+import '../models/app_user.dart';
 import '../models/official_list.dart';
+import '../models/student_course.dart';
 import 'official_list_reader.dart';
+
+/// Error al unirse a un curso o salir de él, con el mensaje en español.
+class CourseException implements Exception {
+  final String message;
+  CourseException(this.message);
+
+  @override
+  String toString() => message;
+}
 
 /// Repositorio de cursos (parte del Modelo en MVVM), conectado a Firestore.
 ///
 /// Estructura en la base de datos (especificación, sección 10):
 /// - `cursos/{cursoId}`: datos del curso y su configuración.
 /// - `cursos/{cursoId}/listaOficial/{codigoEstudiante}`: nombre y correo de la lista importada.
+/// - `cursos/{cursoId}/listaCorreos/{correo}`: los mismos correos, para que las reglas
+///   puedan comprobar si el correo de un estudiante está en la lista.
 /// - `cursos/{cursoId}/inscripciones/{uid}`: estado del estudiante (inscrito, pendiente, retirado).
 /// - `sesiones/{sesionId}`: cada clase (ver [SessionRepository]).
 ///
@@ -169,13 +182,17 @@ class CourseRepository {
       joinedCodes.add(code);
       joinedEmails.add(email);
 
-      // Asistencia: en cuántas clases cerradas aparece su uid entre los presentes.
+      // Asistencia: solo cuentan las clases en las que estaba inscrito al cerrarlas.
       var attended = 0;
+      var absences = 0;
       for (final session in closed) {
-        final present = session.data()['presentesUids'] as List<dynamic>? ?? [];
+        final sessionData = session.data();
+        final present = sessionData['presentesUids'] as List<dynamic>? ?? [];
+        final absent = sessionData['ausentesUids'] as List<dynamic>? ?? [];
         if (present.contains(doc.id)) attended++;
+        if (absent.contains(doc.id)) absences++;
       }
-      final total = closed.length;
+      final total = attended + absences;
 
       students.add(
         CourseStudent(
@@ -186,7 +203,7 @@ class CourseRepository {
           status: _statusFrom(data['estado'] as String?),
           // Sin clases todavía no hay ausencias: se muestra 100 %.
           attendancePercent: total == 0 ? 100 : attended * 100 / total,
-          absences: total - attended,
+          absences: absences,
         ),
       );
     }
@@ -238,6 +255,7 @@ class CourseRepository {
   /// (especificación). Devuelve cuántos estudiantes nuevos se agregaron.
   Future<int> importOfficialList(String courseId, List<OfficialListEntry> entries) async {
     final listRef = _courses.doc(courseId).collection('listaOficial');
+    final emailsRef = _courses.doc(courseId).collection('listaCorreos');
     final existing = await listRef.get();
     final existingCodes = <String>{};
     for (final doc in existing.docs) {
@@ -253,8 +271,10 @@ class CourseRepository {
       existingCodes.add(entry.code);
       // El código va como id del documento: así no se repite el mismo estudiante.
       batch.set(listRef.doc(entry.code), {'nombre': entry.name, 'correo': entry.email});
-      inBatch++;
-      if (inBatch == 450) {
+      // El correo no guarda ningún dato: el documento solo indica que está en la lista.
+      batch.set(emailsRef.doc(entry.email), <String, dynamic>{});
+      inBatch += 2;
+      if (inBatch >= 450) {
         await batch.commit();
         batch = _db.batch();
         inBatch = 0;
@@ -293,13 +313,164 @@ class CourseRepository {
   /// no hay nada más que hacer. (El repositorio de prueba sí la necesita.)
   Future<void> addClosedSession(ClassSession session) async {}
 
-  // ---------- Estudiante (Fase 2) ----------
-  // Las pantallas del estudiante todavía no existen; estos métodos se
-  // conectarán cuando se construyan.
+  // ---------- Estudiante ----------
 
-  Future<List<Course>> getStudentCourses() async => [];
+  /// false en el real; true en el demo, donde no hay cámara ni QR de verdad.
+  bool get isDemo => false;
 
-  Future<Course?> getActiveCourseForStudent() async => null;
+  /// Inscripciones del estudiante en todos los cursos. `collectionGroup` busca en
+  /// todas las subcolecciones "inscripciones" a la vez, en vez de curso por curso.
+  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _myEnrollments() async {
+    final snapshot = await _db.collectionGroup('inscripciones').where('uid', isEqualTo: _uid).get();
+    return snapshot.docs;
+  }
 
-  Future<List<AttendanceRecord>> getStudentHistory() async => [];
+  /// Cursos del estudiante (inscrito o pendiente) con su asistencia, en orden alfabético.
+  Future<List<StudentCourse>> getStudentCourses() async {
+    final courses = <StudentCourse>[];
+    for (final enrollment in await _myEnrollments()) {
+      final status = _statusFrom(enrollment.data()['estado'] as String?);
+      if (status == EnrollmentStatus.withdrawn) continue;
+
+      // El padre de la inscripción es la subcolección y el padre de esta, el curso.
+      final courseDoc = await enrollment.reference.parent.parent!.get();
+      if (!courseDoc.exists) continue;
+      final course = Course.fromFirestore(courseDoc);
+
+      if (status == EnrollmentStatus.pending) {
+        courses.add(StudentCourse(course: course, status: status));
+        continue;
+      }
+      final records = await getStudentCourseRecords(course);
+      var present = 0;
+      for (final record in records) {
+        if (record.present) present++;
+      }
+      courses.add(
+        StudentCourse(course: course, status: status, presentCount: present, absentCount: records.length - present),
+      );
+    }
+    courses.sort((a, b) => a.course.name.compareTo(b.course.name));
+    return courses;
+  }
+
+  /// Las clases de un curso en las que el estudiante aparece, de la más reciente a la más antigua.
+  Future<List<AttendanceRecord>> getStudentCourseRecords(Course course) async {
+    final sessions = await _sessions.where('cursoId', isEqualTo: course.id).get();
+    // Future.wait hace todas las lecturas al mismo tiempo: es mucho más rápido
+    // que esperarlas una por una.
+    final futures = <Future<AttendanceRecord?>>[];
+    for (final session in sessions.docs) {
+      futures.add(_recordFromSession(session, course));
+    }
+    final records = <AttendanceRecord>[];
+    for (final record in await Future.wait(futures)) {
+      if (record != null) records.add(record);
+    }
+    records.sort((a, b) => b.date.compareTo(a.date));
+    return records;
+  }
+
+  /// Registro del estudiante en una clase, o null si no hizo parte de ella
+  /// (se unió después, ya estaba retirado, o la clase sigue abierta y no se ha registrado).
+  Future<AttendanceRecord?> _recordFromSession(
+    QueryDocumentSnapshot<Map<String, dynamic>> session,
+    Course course,
+  ) async {
+    final data = session.data();
+    final startedAt = (data['inicio'] as Timestamp?)?.toDate() ?? DateTime.now();
+    final number = (data['numeroClase'] as num?)?.toInt() ?? 0;
+    final absent = data['ausentesUids'] as List<dynamic>? ?? [];
+    final present = data['presentesUids'] as List<dynamic>? ?? [];
+
+    if (absent.contains(_uid)) {
+      return AttendanceRecord(
+        sessionId: session.id,
+        courseId: course.id,
+        courseName: course.name,
+        number: number,
+        date: startedAt,
+        present: false,
+      );
+    }
+    if (data['abierta'] != true && !present.contains(_uid)) return null;
+
+    final own = await session.reference.collection('asistencias').doc(_uid).get();
+    if (!own.exists) return null;
+    final ownData = own.data() ?? const {};
+    return AttendanceRecord(
+      sessionId: session.id,
+      courseId: course.id,
+      courseName: course.name,
+      number: number,
+      date: (ownData['hora'] as Timestamp?)?.toDate() ?? startedAt,
+      present: true,
+      manual: ownData['metodo'] == 'manual',
+    );
+  }
+
+  /// Todas sus asistencias, también las de cursos de los que ya salió.
+  Future<List<AttendanceRecord>> getStudentHistory() async {
+    final records = <AttendanceRecord>[];
+    for (final enrollment in await _myEnrollments()) {
+      if (enrollment.data()['estado'] == 'pendiente') continue;
+      final courseDoc = await enrollment.reference.parent.parent!.get();
+      if (!courseDoc.exists) continue;
+      records.addAll(await getStudentCourseRecords(Course.fromFirestore(courseDoc)));
+    }
+    records.sort((a, b) => b.date.compareTo(a.date));
+    return records;
+  }
+
+  /// Vista previa "Curso encontrado": busca el curso por su código de inscripción.
+  Future<Course?> findCourseByCode(String code) async {
+    final snapshot = await _courses.where('codigoInscripcion', isEqualTo: code).limit(1).get();
+    if (snapshot.docs.isEmpty) return null;
+    return Course.fromFirestore(snapshot.docs.first);
+  }
+
+  /// Une al estudiante al curso (especificación, sección 6) y devuelve cómo quedó:
+  /// inscrito si está en la lista oficial; si no, pendiente de que el docente lo acepte.
+  /// Si el docente lo había retirado, queda pendiente aunque esté en la lista.
+  Future<EnrollmentStatus> joinCourse(Course course, AppUser user) async {
+    final courseRef = _courses.doc(course.id);
+    final ref = courseRef.collection('inscripciones').doc(_uid);
+
+    final existing = await ref.get();
+    final data = existing.data();
+    if (data != null && data['estado'] == 'inscrito') {
+      throw CourseException('Ya estás inscrito en este curso.');
+    }
+    if (data != null && data['estado'] == 'pendiente') {
+      throw CourseException('Tu solicitud ya está pendiente. Espera a que el docente la acepte.');
+    }
+
+    var onList = false;
+    final removedByTeacher = data != null && data['retiradoPor'] == 'docente';
+    if (!removedByTeacher) {
+      final byCode = await courseRef.collection('listaOficial').doc(user.code).get();
+      final byEmail = await courseRef.collection('listaCorreos').doc(user.email).get();
+      onList = byCode.exists || byEmail.exists;
+    }
+
+    await ref.set({
+      'uid': _uid,
+      'nombre': user.fullName,
+      'codigo': user.code,
+      'correo': user.email,
+      'estado': onList ? 'inscrito' : 'pendiente',
+      'origen': onList ? 'lista' : 'solicitud',
+      'fecha': FieldValue.serverTimestamp(),
+      'retiradoPor': null,
+    });
+    return onList ? EnrollmentStatus.enrolled : EnrollmentStatus.pending;
+  }
+
+  /// Salir del curso. La inscripción pasa a retirado; las asistencias nunca se borran.
+  Future<void> leaveCourse(String courseId) async {
+    await _courses.doc(courseId).collection('inscripciones').doc(_uid).update({
+      'estado': 'retirado',
+      'retiradoPor': 'estudiante',
+    });
+  }
 }

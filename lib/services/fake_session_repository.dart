@@ -1,8 +1,11 @@
 import 'dart:math';
 
 import '../models/active_session.dart';
+import '../models/app_user.dart';
 import '../models/class_session.dart';
+import '../models/course.dart';
 import '../models/course_student.dart';
+import '../util/session_codes.dart';
 import 'course_repository.dart';
 import 'session_repository.dart';
 
@@ -278,4 +281,52 @@ class FakeSessionRepository implements SessionRepository {
     }
     return absents;
   }
+
+  // ---------- Estudiante ----------
+
+  final Set<String> _studentMarked = {}; // Clases en las que el estudiante de ejemplo ya marcó
+  final Set<String> _studentReported = {};
+
+  /// La clase de ejemplo arranca hace 5 minutos y se puede registrar durante 11.
+  final DateTime _demoClassStart = DateTime.now().subtract(const Duration(minutes: 5));
+
+  @override
+  Stream<List<OpenClass>> watchOpenClasses(List<Course> courses) async* {
+    final classes = <OpenClass>[];
+    for (final course in courses) {
+      if (!course.hasActiveSession) continue;
+      final sessionId = '${course.id}-en-curso';
+      classes.add(
+        OpenClass(
+          sessionId: sessionId,
+          course: course,
+          startedAt: _demoClassStart,
+          registrationMinutes: 11,
+          validateBluetooth: course.validateBluetooth,
+          alreadyMarked: _studentMarked.contains(sessionId),
+        ),
+      );
+    }
+    yield classes;
+  }
+
+  /// En el demo no hay reglas: basta con que parezca un QR de Asistly y sea de esta clase.
+  @override
+  Future<void> markWithQr(OpenClass openClass, String qrText, AppUser user) async {
+    await _fakeDelay();
+    final qr = SessionCodes.parseQr(qrText);
+    if (qr == null || qr[0] != openClass.sessionId) {
+      throw SessionException('Ese QR es de otra clase. Lee el que está mostrando tu docente.');
+    }
+    _studentMarked.add(openClass.sessionId);
+  }
+
+  @override
+  Future<void> reportFailure(String sessionId, AppUser user) async {
+    await _fakeDelay();
+    _studentReported.add(sessionId);
+  }
+
+  @override
+  Future<bool> hasReportedFailure(String sessionId) async => _studentReported.contains(sessionId);
 }

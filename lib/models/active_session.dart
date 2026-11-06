@@ -26,6 +26,29 @@ class ActiveSession {
   DateTime get endsAt => startedAt.add(Duration(minutes: registrationMinutes));
 }
 
+/// Una clase abierta tal como la ve el estudiante: no incluye el secreto,
+/// que solo conoce el docente.
+class OpenClass {
+  final String sessionId;
+  final Course course;
+  final DateTime startedAt;
+  final int registrationMinutes;
+  final bool validateBluetooth;
+  final bool alreadyMarked; // El estudiante ya tiene asistencia en esta clase
+
+  const OpenClass({
+    required this.sessionId,
+    required this.course,
+    required this.startedAt,
+    required this.registrationMinutes,
+    required this.validateBluetooth,
+    this.alreadyMarked = false,
+  });
+
+  /// Momento en que termina el tiempo para registrarse.
+  DateTime get endsAt => startedAt.add(Duration(minutes: registrationMinutes));
+}
+
 /// Una asistencia registrada en la sesión.
 ///
 /// En Firestore irá en `sesiones/{id}/asistencias/{uid}`.

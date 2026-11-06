@@ -1,10 +1,12 @@
 import 'dart:math';
 
+import '../models/app_user.dart';
 import '../models/attendance_record.dart';
 import '../models/class_session.dart';
 import '../models/course.dart';
 import '../models/course_student.dart';
 import '../models/official_list.dart';
+import '../models/student_course.dart';
 import 'course_repository.dart';
 
 /// Repositorio de cursos DE PRUEBA, solo para el modo demo (lib/main_demo.dart).
@@ -413,53 +415,129 @@ class FakeCourseRepository implements CourseRepository {
   // ---------- Estudiante ----------
 
   @override
-  Future<List<Course>> getStudentCourses() async {
-    await _fakeDelay();
-    return List.of(_courses);
-  }
+  bool get isDemo => true;
 
-  /// Curso con una clase abierta ahora mismo, o null si no hay ninguna.
-  @override
-  Future<Course?> getActiveCourseForStudent() async {
-    await _fakeDelay();
+  // Inscripciones del estudiante de ejemplo: id del curso -> estado.
+  final Map<String, EnrollmentStatus> _myEnrollments = {
+    'pm2': EnrollmentStatus.enrolled,
+    'as1': EnrollmentStatus.enrolled,
+    'bd3': EnrollmentStatus.enrolled,
+  };
+
+  // Curso al que se puede unir en el demo, con el código IA1-8RTZ.
+  static const _courseToJoin = Course(
+    id: 'ia1',
+    name: 'Inteligencia Artificial',
+    group: 'Grupo 1',
+    semester: '2026-2',
+    days: [2],
+    startTime: '14:00',
+    endTime: '16:00',
+    room: 'Lab 301',
+    enrollCode: 'IA1-8RTZ',
+    teacherName: 'Prof. Castaño',
+  );
+
+  Course? _studentCourseById(String id) {
+    if (id == _courseToJoin.id) return _courseToJoin;
     for (final course in _courses) {
-      if (course.hasActiveSession) return course;
+      if (course.id == id) return course;
     }
     return null;
+  }
+
+  /// 14 clases de ejemplo; falta a una de cada siete.
+  List<AttendanceRecord> _sampleRecords(Course course) {
+    final records = <AttendanceRecord>[];
+    var date = DateTime.now().subtract(const Duration(days: 1));
+    for (var number = 14; number >= 1; number--) {
+      records.add(
+        AttendanceRecord(
+          sessionId: '${course.id}-$number',
+          courseId: course.id,
+          courseName: course.name,
+          number: number,
+          date: date,
+          present: number % 7 != 3,
+          manual: number == 9,
+        ),
+      );
+      date = date.subtract(const Duration(days: 4));
+    }
+    return records;
+  }
+
+  @override
+  Future<List<StudentCourse>> getStudentCourses() async {
+    await _fakeDelay();
+    final result = <StudentCourse>[];
+    for (final id in _myEnrollments.keys) {
+      final status = _myEnrollments[id]!;
+      final course = _studentCourseById(id);
+      if (course == null || status == EnrollmentStatus.withdrawn) continue;
+      if (status == EnrollmentStatus.pending) {
+        result.add(StudentCourse(course: course, status: status));
+        continue;
+      }
+      var present = 0;
+      final records = _sampleRecords(course);
+      for (final record in records) {
+        if (record.present) present++;
+      }
+      result.add(
+        StudentCourse(course: course, status: status, presentCount: present, absentCount: records.length - present),
+      );
+    }
+    return result;
+  }
+
+  @override
+  Future<List<AttendanceRecord>> getStudentCourseRecords(Course course) async {
+    await _fakeDelay();
+    return _sampleRecords(course);
   }
 
   @override
   Future<List<AttendanceRecord>> getStudentHistory() async {
     await _fakeDelay();
-    return [
-      AttendanceRecord(
-        sessionId: 'pm2-14',
-        courseId: 'pm2',
-        courseName: 'Programación Móvil',
-        date: DateTime(2026, 9, 23, 8, 4),
-        present: true,
-      ),
-      AttendanceRecord(
-        sessionId: 'as1-10',
-        courseId: 'as1',
-        courseName: 'Arquitectura de Software',
-        date: DateTime(2026, 9, 22, 10, 14),
-        present: true,
-      ),
-      AttendanceRecord(
-        sessionId: 'pm2-13',
-        courseId: 'pm2',
-        courseName: 'Programación Móvil',
-        date: DateTime(2026, 9, 21, 8, 1),
-        present: true,
-      ),
-      AttendanceRecord(
-        sessionId: 'pm2-12',
-        courseId: 'pm2',
-        courseName: 'Programación Móvil',
-        date: DateTime(2026, 8, 26, 8, 0),
-        present: false,
-      ),
-    ];
+    final records = <AttendanceRecord>[];
+    for (final id in _myEnrollments.keys) {
+      final course = _studentCourseById(id);
+      if (course != null && _myEnrollments[id] != EnrollmentStatus.pending) {
+        records.addAll(_sampleRecords(course));
+      }
+    }
+    records.sort((a, b) => b.date.compareTo(a.date));
+    return records;
+  }
+
+  @override
+  Future<Course?> findCourseByCode(String code) async {
+    await _fakeDelay();
+    if (code == _courseToJoin.enrollCode) return _courseToJoin;
+    for (final course in _courses) {
+      if (course.enrollCode == code) return course;
+    }
+    return null;
+  }
+
+  /// En el demo, unirse siempre queda pendiente (como si no estuviera en la lista).
+  @override
+  Future<EnrollmentStatus> joinCourse(Course course, AppUser user) async {
+    await _fakeDelay();
+    if (_myEnrollments[course.id] == EnrollmentStatus.enrolled) {
+      throw CourseException('Ya estás inscrito en este curso.');
+    }
+    if (_myEnrollments[course.id] == EnrollmentStatus.pending) {
+      throw CourseException('Tu solicitud ya está pendiente. Espera a que el docente la acepte.');
+    }
+    _myEnrollments[course.id] = EnrollmentStatus.pending;
+    return EnrollmentStatus.pending;
+  }
+
+  @override
+  Future<void> leaveCourse(String courseId) async {
+    await _fakeDelay();
+    _myEnrollments[courseId] = EnrollmentStatus.withdrawn;
   }
 }

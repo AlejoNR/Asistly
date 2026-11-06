@@ -84,6 +84,75 @@ service cloud.firestore {
       return now >= minutesOf(c.horaInicio) - 15 && now <= minutesOf(c.horaFin);
     }
 
+    // Perfil de quien hace la petición (nombre, código, rol y celular vinculado).
+    function profile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // El estudiante está en la lista oficial del curso por su código o por su correo.
+    function isOnOfficialList(courseId) {
+      return exists(/databases/$(database)/documents/cursos/$(courseId)/listaOficial/$(profile().code))
+        || exists(/databases/$(database)/documents/cursos/$(courseId)/listaCorreos/$(request.auth.token.email));
+    }
+
+    // Datos de una inscripción: nombre, código y correo tienen que ser los del perfil.
+    function validEnrollment(uid) {
+      let d = request.resource.data;
+      return profile().role == 'student'
+        && d.keys().hasOnly(['uid', 'nombre', 'codigo', 'correo', 'estado', 'origen', 'fecha', 'retiradoPor'])
+        && d.uid == uid
+        && d.nombre == profile().fullName
+        && d.codigo == profile().code
+        && d.correo == request.auth.token.email
+        && d.fecha == request.time
+        && d.retiradoPor == null;
+    }
+
+    // Queda pendiente siempre que quiera; inscrito solo si está en la lista oficial.
+    function joinsAsPending() {
+      return request.resource.data.estado == 'pendiente' && request.resource.data.origen == 'solicitud';
+    }
+
+    function joinsFromList(courseId) {
+      return request.resource.data.estado == 'inscrito'
+        && request.resource.data.origen == 'lista'
+        && isOnOfficialList(courseId);
+    }
+
+    // La clase está abierta y el estudiante está inscrito en ese curso.
+    function canActInSession(sessionId, uid) {
+      let s = get(/databases/$(database)/documents/sesiones/$(sessionId)).data;
+      return s.abierta == true
+        && profile().role == 'student'
+        && get(/databases/$(database)/documents/cursos/$(s.cursoId)/inscripciones/$(uid)).data.estado == 'inscrito';
+    }
+
+    // Asistencia del estudiante (especificación, sección 4): dentro del tiempo de registro,
+    // desde su celular vinculado y con un código QR vigente. Los códigos se comparan aquí,
+    // en el servidor: la app nunca puede leerlos.
+    function validStudentAttendance(sessionId, uid) {
+      let d = request.resource.data;
+      let s = get(/databases/$(database)/documents/sesiones/$(sessionId)).data;
+      let t = get(/databases/$(database)/documents/sesiones/$(sessionId)/privado/tokens).data;
+      return canActInSession(sessionId, uid)
+        && request.time <= s.inicio + duration.value(s.tiempoRegistro, 'm')
+        && request.time <= t.actualizadoEn + duration.value(1, 'm')
+        && d.keys().hasOnly(['estado', 'hora', 'metodo', 'qr', 'deviceId', 'nombre', 'codigo'])
+        && d.estado == 'presente'
+        && d.metodo == 'qr'
+        && d.hora == request.time
+        && d.deviceId == profile().deviceId
+        && d.nombre == profile().fullName
+        && d.codigo == profile().code
+        && (d.qr == t.qrActual || d.qr == t.qrAnterior);
+    }
+
+    // "Mis cursos" del estudiante: busca sus inscripciones en todos los cursos a la vez
+    // (consulta collectionGroup; necesita el índice de firestore.indexes.json).
+    match /{path=**}/inscripciones/{enrollmentId} {
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
     match /cursos/{courseId} {
       // Cualquier usuario con sesión puede leer cursos: el estudiante los busca por código.
       allow read: if signedIn();
@@ -97,13 +166,21 @@ service cloud.firestore {
         && request.resource.data.codigoInscripcion == resource.data.codigoInscripcion;
       allow delete: if false;
 
-      // Lista oficial importada: solo la ve y la edita el docente del curso.
+      // Lista oficial importada: la ve y la edita el docente del curso.
+      // El estudiante solo puede consultar su propia fila, para saber si está en la lista.
       match /listaOficial/{studentCode} {
         allow read, write: if ownsCourse(courseId);
+        allow get: if signedIn() && studentCode == profile().code;
       }
 
-      // Inscripciones: el docente acepta, retira o rechaza; el estudiante ve la suya.
-      // (Unirse a un curso lo agrega la Fase 2, con las pantallas del estudiante.)
+      // Los mismos correos de la lista, para poder buscar por correo (solo existencia).
+      match /listaCorreos/{email} {
+        allow read, write: if ownsCourse(courseId);
+        allow get: if signedIn() && email == request.auth.token.email;
+      }
+
+      // Inscripciones: el docente acepta, retira o rechaza; el estudiante ve la suya,
+      // se une con el código del curso y puede salirse.
       match /inscripciones/{uid} {
         allow read: if ownsCourse(courseId) || (signedIn() && request.auth.uid == uid);
         allow update: if ownsCourse(courseId)
@@ -112,7 +189,24 @@ service cloud.firestore {
           && request.resource.data.estado in ['inscrito', 'retirado'];
         // Rechazar = borrar una solicitud pendiente.
         allow delete: if ownsCourse(courseId) && resource.data.estado == 'pendiente';
-        allow create: if false;
+
+        // Unirse por primera vez.
+        allow create: if isOwner(uid)
+          && validEnrollment(uid)
+          && (joinsAsPending() || joinsFromList(courseId));
+
+        // Volver después de un retiro. Si lo retiró el docente, siempre queda pendiente.
+        allow update: if isOwner(uid)
+          && resource.data.estado == 'retirado'
+          && validEnrollment(uid)
+          && (joinsAsPending() || (resource.data.retiradoPor == 'estudiante' && joinsFromList(courseId)));
+
+        // Salir del curso. Las asistencias no se tocan.
+        allow update: if isOwner(uid)
+          && resource.data.estado == 'inscrito'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'retiradoPor'])
+          && request.resource.data.estado == 'retirado'
+          && request.resource.data.retiradoPor == 'estudiante';
       }
     }
 
@@ -147,9 +241,10 @@ service cloud.firestore {
           && getAfter(/databases/$(database)/documents/sesiones/$(sessionId)).data.docenteId == request.auth.uid;
       }
 
-      // Asistencias: el docente ve todas y marca las manuales; el estudiante ve la suya.
-      // (El registro del estudiante con QR + Bluetooth lo agrega la Fase 2.)
+      // Asistencias: el docente ve todas y marca las manuales; el estudiante ve la suya
+      // y registra la suya con el QR (solo una: el id del documento es su uid).
       match /asistencias/{uid} {
+        allow create: if isOwner(uid) && validStudentAttendance(sessionId, uid);
         allow read: if signedIn() && (
           get(/databases/$(database)/documents/sesiones/$(sessionId)).data.docenteId == request.auth.uid
           || request.auth.uid == uid);
@@ -162,12 +257,19 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
-      // Reportes de falla: el docente los ve. (El estudiante los envía en la Fase 2.)
+      // Reportes de falla: el docente los ve; el estudiante envía uno por clase,
+      // con la clase abierta. No marca asistencia: solo el docente decide.
       match /reportesFalla/{uid} {
         allow read: if signedIn() && (
           get(/databases/$(database)/documents/sesiones/$(sessionId)).data.docenteId == request.auth.uid
           || request.auth.uid == uid);
-        allow write: if false;
+        allow create: if isOwner(uid)
+          && canActInSession(sessionId, uid)
+          && request.resource.data.keys().hasOnly(['hora', 'nombre', 'codigo'])
+          && request.resource.data.hora == request.time
+          && request.resource.data.nombre == profile().fullName
+          && request.resource.data.codigo == profile().code;
+        allow update, delete: if false;
       }
     }
   }

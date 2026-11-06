@@ -18,6 +18,20 @@ class DateFormatEs {
     return '${_shortDays[date.weekday - 1]} ${date.day} ${_shortMonths[date.month - 1]}';
   }
 
+  /// "Lun, 21 Sep"; "Hoy, 23 Sep" o "Ayer, 22 Sep" si corresponde.
+  static String relative(DateTime date, DateTime now) {
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(date.year, date.month, date.day);
+    final daysAgo = today.difference(day).inHours ~/ 24;
+    var name = _shortDays[date.weekday - 1];
+    if (daysAgo == 0) name = 'Hoy';
+    if (daysAgo == 1) name = 'Ayer';
+    return '$name, ${date.day} ${_shortMonths[date.month - 1]}';
+  }
+
+  /// "Lun" (1 = lunes ... 7 = domingo).
+  static String shortDay(int weekday) => _shortDays[weekday - 1];
+
   /// "Septiembre 2026"
   static String monthYear(DateTime date) {
     final month = _months[date.month - 1];

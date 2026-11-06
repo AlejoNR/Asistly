@@ -1,13 +1,17 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/active_session.dart';
+import '../models/app_user.dart';
 import '../models/class_session.dart';
+import '../models/course.dart';
 import '../models/course_student.dart';
 import '../util/session_codes.dart';
 import 'course_repository.dart';
+import 'device_service.dart';
 
 /// Error de una sesión de clase, con el mensaje en español.
 class SessionException implements Exception {
@@ -34,6 +38,7 @@ class SessionRepository {
   SessionRepository(this._courseRepo);
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final DeviceService _deviceService = DeviceService();
 
   CollectionReference<Map<String, dynamic>> get _sessions => _db.collection('sesiones');
 
@@ -239,7 +244,13 @@ class SessionRepository {
       presentIds.add(doc.id);
       if (doc.data()['metodo'] == 'manual') manual++;
     }
-    final absent = enrolled.length - presentIds.length;
+    // Se guardan también los ausentes: así un estudiante que se une después
+    // no aparece como ausente en las clases anteriores a su inscripción.
+    final absentIds = <String>[];
+    for (final uid in enrolledIds) {
+      if (!presentIds.contains(uid)) absentIds.add(uid);
+    }
+    final absent = absentIds.length;
 
     await sessionDoc.reference.update({
       'abierta': false,
@@ -248,6 +259,7 @@ class SessionRepository {
       'ausentes': absent,
       'manuales': manual,
       'presentesUids': presentIds,
+      'ausentesUids': absentIds,
     });
 
     final data = sessionDoc.data();
@@ -284,5 +296,122 @@ class SessionRepository {
       if (!present.contains(student.uid)) absents.add(student);
     }
     return absents;
+  }
+
+  // ---------- Estudiante ----------
+
+  /// Las clases abiertas de sus cursos, en TIEMPO REAL (especificación, sección 7).
+  /// `asyncMap` permite hacer otra lectura por cada cambio: aquí, mirar si el
+  /// estudiante ya tiene asistencia en cada clase abierta.
+  Stream<List<OpenClass>> watchOpenClasses(List<Course> courses) {
+    if (courses.isEmpty) return Stream.value(<OpenClass>[]);
+
+    final byId = <String, Course>{};
+    for (final course in courses) {
+      byId[course.id] = course;
+    }
+    // Firestore permite buscar hasta 30 valores con whereIn.
+    final ids = byId.keys.take(30).toList();
+
+    return _sessions
+        .where('cursoId', whereIn: ids)
+        .where('abierta', isEqualTo: true)
+        .snapshots()
+        .asyncMap((snapshot) async {
+          final classes = <OpenClass>[];
+          for (final doc in snapshot.docs) {
+            final data = doc.data();
+            final course = byId[data['cursoId']];
+            final startedAt = (data['inicio'] as Timestamp?)?.toDate();
+            if (course == null || startedAt == null) continue;
+            final own = await doc.reference.collection('asistencias').doc(_uid).get();
+            classes.add(
+              OpenClass(
+                sessionId: doc.id,
+                course: course,
+                startedAt: startedAt,
+                registrationMinutes: (data['tiempoRegistro'] as num?)?.toInt() ?? course.registrationMinutes,
+                validateBluetooth: data['validarBluetooth'] as bool? ?? true,
+                alreadyMarked: own.exists,
+              ),
+            );
+          }
+          return classes;
+        });
+  }
+
+  /// Registra la asistencia con el texto del QR leído. Quien valida de verdad son las
+  /// reglas de Firestore: comparan el código con los vigentes, que la app no puede leer.
+  Future<void> markWithQr(OpenClass openClass, String qrText, AppUser user) async {
+    final qr = SessionCodes.parseQr(qrText);
+    if (qr == null) throw SessionException('Ese código no es un QR de asistencia de Asistly.');
+    if (qr[0] != openClass.sessionId) {
+      throw SessionException('Ese QR es de otra clase. Lee el que está mostrando tu docente.');
+    }
+
+    final ref = _sessions.doc(openClass.sessionId).collection('asistencias').doc(_uid);
+    final data = {
+      'estado': 'presente',
+      'hora': FieldValue.serverTimestamp(),
+      'metodo': 'qr',
+      'qr': qr[1],
+      'deviceId': await _deviceService.getDeviceId(),
+      'nombre': user.fullName,
+      'codigo': user.code,
+    };
+
+    try {
+      await _write(ref, data);
+    } on FirebaseException catch (e) {
+      if (e.code != 'permission-denied') rethrow;
+      // Justo al cambiar la ventana de 15 s, el QR nuevo puede llegar antes que los
+      // códigos que publica el docente: se espera un momento y se intenta otra vez.
+      await Future.delayed(const Duration(seconds: 2));
+      try {
+        await _write(ref, data);
+      } on FirebaseException catch (retryError) {
+        if (retryError.code != 'permission-denied') rethrow;
+        throw SessionException(await _rejectionReason(openClass, ref));
+      }
+    }
+  }
+
+  /// Escritura con límite de tiempo: sin internet, Firestore esperaría para siempre
+  /// a que vuelva la conexión. La asistencia necesita la respuesta del servidor ahora.
+  Future<void> _write(DocumentReference<Map<String, dynamic>> ref, Map<String, dynamic> data) async {
+    try {
+      await ref.set(data).timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      throw SessionException('Sin conexión. Revisa tu internet e intenta de nuevo.');
+    }
+  }
+
+  /// Las reglas solo responden "no": aquí se averigua el motivo para explicarlo.
+  Future<String> _rejectionReason(OpenClass openClass, DocumentReference<Map<String, dynamic>> ref) async {
+    try {
+      final own = await ref.get(const GetOptions(source: Source.server));
+      if (own.exists) return 'Ya tienes tu asistencia registrada en esta clase.';
+      final session = await _sessions.doc(openClass.sessionId).get(const GetOptions(source: Source.server));
+      if (session.data()?['abierta'] != true) return 'El docente ya cerró esta clase.';
+      if (DateTime.now().isAfter(openClass.endsAt)) return 'Se acabó el tiempo para registrarse.';
+    } catch (e) {
+      // Si esto también falla, se muestra el motivo general.
+    }
+    return 'El código QR venció o no es válido. Intenta de nuevo con el que está en pantalla.';
+  }
+
+  /// "Informar al docente": no marca asistencia, solo le avisa (una vez por clase).
+  Future<void> reportFailure(String sessionId, AppUser user) async {
+    final ref = _sessions.doc(sessionId).collection('reportesFalla').doc(_uid);
+    await _write(ref, {
+      'hora': FieldValue.serverTimestamp(),
+      'nombre': user.fullName,
+      'codigo': user.code,
+    });
+  }
+
+  Future<bool> hasReportedFailure(String sessionId) async {
+    final doc = await _sessions.doc(sessionId).collection('reportesFalla').doc(_uid).get();
+    return doc.exists;
   }
 }

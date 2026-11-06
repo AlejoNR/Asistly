@@ -35,4 +35,12 @@ class SessionCodes {
     final window = windowAt(now);
     return 'asistly:$sessionId:${code(secret, 'qr', window)}';
   }
+
+  /// Parte un QR leído en [sesión, código]. Devuelve null si no es un QR de Asistly.
+  static List<String>? parseQr(String text) {
+    final parts = text.split(':');
+    if (parts.length != 3 || parts[0] != 'asistly') return null;
+    if (parts[1].isEmpty || parts[2].isEmpty) return null;
+    return [parts[1], parts[2]];
+  }
 }

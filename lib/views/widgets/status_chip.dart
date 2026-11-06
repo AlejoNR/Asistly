@@ -62,9 +62,12 @@ class StatusChip extends StatelessWidget {
             ),
             const SizedBox(width: 6),
           ],
-          Text(
-            label,
-            style: AppText.labelMd.copyWith(color: foreground, fontWeight: FontWeight.w600),
+          // Flexible: si el texto no cabe en un celular angosto, baja de línea en vez de desbordarse.
+          Flexible(
+            child: Text(
+              label,
+              style: AppText.labelMd.copyWith(color: foreground, fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
