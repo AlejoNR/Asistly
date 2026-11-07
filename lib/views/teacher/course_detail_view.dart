@@ -313,7 +313,9 @@ class _QuickActions extends StatelessWidget {
             child: _QuickAction(
               icon: Icons.group_outlined,
               title: 'Estudiantes',
-              subtitle: course.pendingCount > 0 ? '${course.pendingCount} pendientes' : 'Ver lista',
+              subtitle: course.pendingCount == 0
+                  ? 'Ver lista'
+                  : (course.pendingCount == 1 ? '1 pendiente' : '${course.pendingCount} pendientes'),
               badge: course.pendingCount,
               onTap: () =>
                   Navigator.pushNamed(context, 'course_students', arguments: course.id).then((value) => onReturn()),

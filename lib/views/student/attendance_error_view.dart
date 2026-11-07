@@ -16,14 +16,11 @@ class AttendanceErrorView extends StatelessWidget {
     Navigator.popUntil(context, ModalRoute.withName('student_home'));
   }
 
-  /// Vuelve al paso que falló.
-  void _retry(BuildContext context, AttendanceErrorViewModel vm) {
-    final info = vm.info;
-    Navigator.pushReplacementNamed(
-      context,
-      info.isSignalError ? 'signal_search' : 'scan_qr',
-      arguments: info.openClass,
-    );
+  /// Vuelve al paso que falló, que sigue debajo de esta pantalla. El true le dice
+  /// que debe intentar de nuevo; se regresa en vez de abrir otra pantalla para que
+  /// el Inicio se entere al final de todo el flujo y se actualice.
+  void _retry(BuildContext context) {
+    Navigator.pop(context, true);
   }
 
   @override
@@ -84,6 +81,14 @@ class AttendanceErrorView extends StatelessWidget {
               Text('No pudimos registrar tu asistencia',
                   textAlign: TextAlign.center,
                   style: AppText.headlineSm.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              Text(
+                info.isSignalError
+                    ? 'No detectamos la señal del docente. Acércate al salón e inténtalo de nuevo.'
+                    : 'No se pudo validar el código. Inténtalo de nuevo con el que muestra tu docente.',
+                textAlign: TextAlign.center,
+                style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant),
+              ),
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(14),
@@ -91,10 +96,18 @@ class AttendanceErrorView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('DETALLES',
-                        style: AppText.labelMd.copyWith(color: AppColors.secondary, fontWeight: FontWeight.w700)),
+                    Row(
+                      children: [
+                        const Icon(Icons.settings_input_antenna, size: 18, color: AppColors.secondary),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text('DETALLES DEL ESCANEO',
+                              style: AppText.labelMd.copyWith(color: AppColors.secondary, fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 10),
-                    _InfoBox(label: 'Materia en curso', value: '${course.name} · ${course.room}'),
+                    _InfoBox(label: 'Materia en curso', value: '${course.name} · ${course.room}', dot: true),
                     const SizedBox(height: 10),
                     _InfoBox(label: 'Causa detectada', value: info.cause, warning: true),
                   ],
@@ -131,7 +144,7 @@ class AttendanceErrorView extends StatelessWidget {
                 label: 'Reintentar',
                 leadingIcon: Icons.refresh,
                 radius: 16,
-                onPressed: () => _retry(context, vm),
+                onPressed: () => _retry(context),
               ),
               const SizedBox(height: 12),
               if (vm.reported)
@@ -168,7 +181,8 @@ class _InfoBox extends StatelessWidget {
   final String label;
   final String value;
   final bool warning;
-  const _InfoBox({required this.label, required this.value, this.warning = false});
+  final bool dot;
+  const _InfoBox({required this.label, required this.value, this.warning = false, this.dot = false});
 
   @override
   Widget build(BuildContext context) {
@@ -187,6 +201,14 @@ class _InfoBox extends StatelessWidget {
               if (warning) ...[
                 const Icon(Icons.warning_amber_rounded, size: 20, color: AppColors.absent),
                 const SizedBox(width: 6),
+              ],
+              if (dot) ...[
+                Container(
+                  width: 10,
+                  height: 10,
+                  margin: const EdgeInsets.only(top: 6, right: 8),
+                  decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                ),
               ],
               Expanded(child: Text(value, style: AppText.titleMd.copyWith(color: AppColors.primary))),
             ],

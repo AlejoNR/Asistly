@@ -68,6 +68,12 @@ class SignalSearchViewModel extends BaseViewModel {
     }
   }
 
+  /// "Reintentar" desde la pantalla de error: busca la señal otra vez.
+  Future<void> retry() async {
+    _failureTaken = false;
+    await _search();
+  }
+
   /// true solo la primera vez: la vista navega una sola vez a la pantalla de error.
   bool takeFailure() {
     if (state != SignalState.failed || _failureTaken) return false;

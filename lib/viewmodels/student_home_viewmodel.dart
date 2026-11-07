@@ -31,6 +31,9 @@ class StudentHomeViewModel extends BaseViewModel {
   List<OpenClass> openClasses = [];
   DateTime now = DateTime.now();
 
+  /// false si entró desde otro celular: puede ver todo, pero no marcar asistencia.
+  bool isLinkedDevice = true;
+
   Timer? _clock;
   StreamSubscription<List<OpenClass>>? _openClassesSub;
 
@@ -39,6 +42,7 @@ class StudentHomeViewModel extends BaseViewModel {
     error = null;
     notify();
     try {
+      isLinkedDevice = await _authRepo.isLinkedDevice();
       courses = await _courseRepo.getStudentCourses();
       _listenOpenClasses();
     } catch (e) {
@@ -86,8 +90,15 @@ class StudentHomeViewModel extends BaseViewModel {
     return 'Semestre ${courses.first.course.semester}';
   }
 
-  /// La clase abierta que se muestra en la tarjeta amarilla.
-  OpenClass? get openClass => openClasses.isEmpty ? null : openClasses.first;
+  /// La clase abierta que se muestra en la tarjeta amarilla: primero la que
+  /// le falta marcar, para que otra clase ya marcada no la esconda.
+  OpenClass? get openClass {
+    if (openClasses.isEmpty) return null;
+    for (final open in openClasses) {
+      if (!open.alreadyMarked) return open;
+    }
+    return openClasses.first;
+  }
 
   bool isLive(String courseId) {
     for (final open in openClasses) {

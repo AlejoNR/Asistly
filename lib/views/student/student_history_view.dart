@@ -142,8 +142,15 @@ class _SummaryCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text('Asistencia General', style: AppText.titleLg.copyWith(color: AppColors.primary)),
                 const SizedBox(height: 6),
-                Text('${vm.percent}%',
-                    style: AppText.headlineLg.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                Wrap(
+                  spacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.end,
+                  children: [
+                    Text('${vm.percent}%',
+                        style: AppText.headlineLg.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                    Text('de cumplimiento', style: AppText.bodySm.copyWith(color: AppColors.secondary)),
+                  ],
+                ),
                 const SizedBox(height: 6),
                 AttendanceLegend(present: vm.presentCount, absent: vm.absentCount),
               ],

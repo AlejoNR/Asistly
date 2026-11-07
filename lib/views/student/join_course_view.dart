@@ -118,22 +118,32 @@ class JoinCourseView extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.check_circle_outline, size: 16, color: AppColors.primary),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text('Curso encontrado',
-                                  style: AppText.labelMd.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
-                            ),
-                          ],
+                        // Wrap: el código va a la derecha si cabe; si no, baja y no parte el título.
+                        SizedBox(
+                          width: double.infinity,
+                          child: Wrap(
+                            alignment: WrapAlignment.spaceBetween,
+                            spacing: 8,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.check_circle_outline, size: 16, color: AppColors.primary),
+                                  const SizedBox(width: 4),
+                                  Text('Curso encontrado',
+                                      style: AppText.labelMd.copyWith(
+                                          color: AppColors.primary, fontWeight: FontWeight.w700)),
+                                ],
+                              ),
+                              Text(course.enrollCode,
+                                  style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant)),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(course.fullName, style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
                         Text('${course.teacherName} · ${course.room}',
                             style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
-                        Text(course.enrollCode,
-                            style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant)),
                       ],
                     ),
                   ),

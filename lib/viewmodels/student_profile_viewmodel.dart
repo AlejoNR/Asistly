@@ -12,6 +12,7 @@ class StudentProfileViewModel extends ProfileViewModel {
 
   int _present = 0;
   int _total = 0;
+  bool _isLinkedDevice = true;
 
   bool get hasClasses => _total > 0;
   int get globalPercent => hasClasses ? (_present * 100 / _total).round() : 0;
@@ -22,12 +23,13 @@ class StudentProfileViewModel extends ProfileViewModel {
     final id = user?.deviceId ?? '';
     if (id.isEmpty) return 'Sin vincular';
     final end = id.length <= 6 ? id : id.substring(id.length - 6);
-    return 'Este celular · ID …$end';
+    return '${_isLinkedDevice ? 'Este celular' : 'Otro celular'} · ID …$end';
   }
 
   Future<void> load() async {
     // Si falla, el perfil se muestra igual, sin el porcentaje.
     try {
+      _isLinkedDevice = await authRepo.isLinkedDevice();
       var present = 0;
       var total = 0;
       for (final item in await _courseRepo.getStudentCourses()) {

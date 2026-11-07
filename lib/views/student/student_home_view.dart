@@ -329,6 +329,12 @@ class _LiveClassCard extends StatelessWidget {
                     icon: Icons.timer_off_outlined,
                     onPressed: null,
                   )
+                else if (!vm.isLinkedDevice)
+                  const _ScanButton(
+                    label: 'Marca desde tu celular vinculado',
+                    icon: Icons.phonelink_lock,
+                    onPressed: null,
+                  )
                 else
                   _ScanButton(
                     label: 'Escanear QR de asistencia',

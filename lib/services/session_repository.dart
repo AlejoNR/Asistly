@@ -349,13 +349,20 @@ class SessionRepository {
       throw SessionException('Ese QR es de otra clase. Lee el que está mostrando tu docente.');
     }
 
+    // Se puede iniciar sesión desde cualquier celular, pero marcar solo desde el vinculado.
+    // Las reglas también lo exigen: esto es para explicar el motivo en vez de un rechazo general.
+    final deviceId = await _deviceService.getDeviceId();
+    if (deviceId != user.deviceId) {
+      throw SessionException('Solo puedes marcar asistencia desde el celular vinculado a tu cuenta.');
+    }
+
     final ref = _sessions.doc(openClass.sessionId).collection('asistencias').doc(_uid);
     final data = {
       'estado': 'presente',
       'hora': FieldValue.serverTimestamp(),
       'metodo': 'qr',
       'qr': qr[1],
-      'deviceId': await _deviceService.getDeviceId(),
+      'deviceId': deviceId,
       'nombre': user.fullName,
       'codigo': user.code,
     };

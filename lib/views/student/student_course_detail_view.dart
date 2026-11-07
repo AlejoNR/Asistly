@@ -249,9 +249,17 @@ class _AttendanceCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('${vm.percent}%',
-                                style: AppText.headlineLg.copyWith(
-                                    color: AppColors.primaryContainer, fontWeight: FontWeight.w700)),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text('${vm.percent}%',
+                                    style: AppText.headlineLg.copyWith(
+                                        color: AppColors.primaryContainer, fontWeight: FontWeight.w700)),
+                                const SizedBox(width: 6),
+                                Text('total', style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+                              ],
+                            ),
                             const SizedBox(height: 4),
                             AttendanceLegend(present: vm.presentCount, absent: vm.absentCount),
                           ],

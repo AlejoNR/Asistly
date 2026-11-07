@@ -196,7 +196,7 @@ class ClosedSessionView extends StatelessWidget {
               const SizedBox(height: 8),
             ],
             Text(
-              'Mostrando ${vm.present.length} alumnos presentes',
+              vm.present.length == 1 ? 'Mostrando 1 alumno presente' : 'Mostrando ${vm.present.length} alumnos presentes',
               textAlign: TextAlign.center,
               style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
             ),

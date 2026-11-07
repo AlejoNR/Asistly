@@ -44,11 +44,16 @@ class _ScanQrViewState extends State<ScanQrView> {
     if (result == ScanResult.success) {
       Navigator.pushReplacementNamed(context, 'attendance_done', arguments: vm.openClass);
     } else if (result == ScanResult.failed) {
-      Navigator.pushReplacementNamed(
+      // Esta pantalla queda debajo de la de error: se detiene la cámara para que no
+      // siga leyendo códigos sin que se vea. Devuelve true si tocó "Reintentar".
+      await _camera.stop();
+      if (!mounted) return;
+      final retry = await Navigator.pushNamed(
         context,
         'attendance_error',
         arguments: AttendanceErrorInfo(openClass: vm.openClass, cause: vm.failure),
       );
+      if (retry == true && mounted) await _camera.start();
     }
   }
 
@@ -106,7 +111,8 @@ class _ScanQrViewState extends State<ScanQrView> {
                               onDetect: (capture) => _onDetect(capture, vm),
                               errorBuilder: (context, error) => _CameraError(error: error),
                             ),
-                            // Las cuatro esquinas amarillas del visor.
+                            // Cruz central y las cuatro esquinas amarillas del visor.
+                            const Center(child: Icon(Icons.add, size: 40, color: AppColors.tertiaryFixedDim)),
                             const _Corner(alignment: Alignment.topLeft),
                             const _Corner(alignment: Alignment.topRight),
                             const _Corner(alignment: Alignment.bottomLeft),

@@ -32,6 +32,8 @@ class AuthRepository {
   /// Perfil de quien inició sesión (null si no hay sesión).
   AppUser? user;
 
+  bool _isDemo = false;
+
   String get currentEmail => _authService.currentUser?.email ?? '';
 
   /// Cada rol tiene su propio Home: 'teacher_home' o 'student_home'.
@@ -48,7 +50,7 @@ class AuthRepository {
 
     try {
       final profile = await _userService.getUser(firebaseUser.uid);
-      if (profile == null || !await _isThisDevice(profile)) {
+      if (profile == null) {
         await signOut();
         return 'role';
       }
@@ -63,7 +65,8 @@ class AuthRepository {
     }
   }
 
-  /// Inicia sesión y revisa que el rol y el celular coincidan.
+  /// Inicia sesión y revisa que el rol coincida. Se puede entrar desde cualquier
+  /// celular: el vinculado solo se exige para marcar asistencia.
   /// Devuelve la ruta a la que hay que ir: el Home del rol o 'verify_email'.
   Future<String> login(String email, String password, UserRole role) async {
     try {
@@ -79,13 +82,6 @@ class AuthRepository {
         throw AuthException(
           'Esta cuenta está registrada como ${profile.role.label.toLowerCase()}. '
           'Vuelve y elige ese rol.',
-        );
-      }
-      if (!await _isThisDevice(profile)) {
-        await signOut();
-        throw AuthException(
-          'Tu cuenta está vinculada a otro dispositivo. '
-          'Solicita el cambio al administrador.',
         );
       }
 
@@ -168,6 +164,7 @@ class AuthRepository {
   /// SOLO PARA EL MODO DEMO (lib/main_demo.dart): entra con un usuario de
   /// ejemplo sin pasar por Firebase, para revisar las pantallas sin iniciar sesión.
   void startDemo(UserRole role) {
+    _isDemo = true;
     if (role == UserRole.teacher) {
       user = const AppUser(
         uid: 'demo-docente',
@@ -193,16 +190,18 @@ class AuthRepository {
     await _authService.signOut();
   }
 
-  // ---------- Ayudas privadas ----------
-
-  String _clean(String email) => email.trim().toLowerCase();
-
-  /// Los docentes no tienen celular vinculado; los estudiantes sí.
-  Future<bool> _isThisDevice(AppUser profile) async {
-    if (profile.role != UserRole.student) return true;
+  /// true si este es el celular vinculado a la cuenta: el único desde el que
+  /// el estudiante puede marcar asistencia. En el demo no hay celular vinculado.
+  Future<bool> isLinkedDevice() async {
+    final profile = user;
+    if (_isDemo || profile == null) return true;
     final thisDevice = await _deviceService.getDeviceId();
     return profile.deviceId == thisDevice;
   }
+
+  // ---------- Ayudas privadas ----------
+
+  String _clean(String email) => email.trim().toLowerCase();
 
   /// Convierte cualquier error técnico en un mensaje claro en español.
   AuthException _toAuthException(Object error) {

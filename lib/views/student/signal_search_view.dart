@@ -25,7 +25,8 @@ class SignalSearchView extends StatelessWidget {
     if (vm.takeFailure()) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
-        Navigator.pushReplacementNamed(
+        // Devuelve true si tocó "Reintentar"; si cerró, ya se volvió al Inicio.
+        Navigator.pushNamed(
           context,
           'attendance_error',
           arguments: AttendanceErrorInfo(
@@ -33,7 +34,9 @@ class SignalSearchView extends StatelessWidget {
             cause: 'Fuera del rango de cobertura Bluetooth del aula.',
             isSignalError: true,
           ),
-        );
+        ).then((retry) {
+          if (retry == true) vm.retry();
+        });
       });
     }
 
@@ -184,6 +187,18 @@ class _RadarState extends State<_Radar> with SingleTickerProviderStateMixin {
             height: 64,
             decoration: const BoxDecoration(color: AppColors.primaryContainer, shape: BoxShape.circle),
             child: Icon(widget.detected ? Icons.check : Icons.bluetooth_searching, color: AppColors.onPrimary, size: 34),
+          ),
+          // Punto amarillo del mockup, en el borde del círculo central.
+          Transform.translate(
+            offset: const Offset(28, -28),
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: AppColors.tertiaryFixedDim.withValues(alpha: 0.85),
+                shape: BoxShape.circle,
+              ),
+            ),
           ),
         ],
       ),

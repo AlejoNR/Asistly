@@ -251,14 +251,18 @@ class _CodeCard extends StatelessWidget {
             child: Column(
               children: [
                 // Wrap: si el grupo y el aula no caben en una línea, el aula baja.
-                Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _Pill(text: course.group),
-                    _Pill(text: course.room, icon: Icons.meeting_room_outlined),
-                  ],
+                // SizedBox a todo el ancho: sin él, el Wrap se encoge y no los separa a los lados.
+                SizedBox(
+                  width: double.infinity,
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _Pill(text: course.group),
+                      _Pill(text: course.room, icon: Icons.meeting_room_outlined),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(

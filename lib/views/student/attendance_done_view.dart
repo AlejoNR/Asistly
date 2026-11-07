@@ -63,18 +63,37 @@ class AttendanceDoneView extends StatelessWidget {
                   height: 140,
                   alignment: Alignment.center,
                   decoration: const BoxDecoration(color: AppColors.primaryFixed, shape: BoxShape.circle),
-                  child: Container(
-                    width: 92,
-                    height: 92,
-                    decoration: const BoxDecoration(color: AppColors.primaryContainer, shape: BoxShape.circle),
-                    child: const Icon(Icons.check, size: 48, color: AppColors.onPrimary),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: 92,
+                        height: 92,
+                        decoration: const BoxDecoration(color: AppColors.primaryContainer, shape: BoxShape.circle),
+                        child: const Icon(Icons.check, size: 48, color: AppColors.onPrimary),
+                      ),
+                      // Punto amarillo del mockup.
+                      Positioned(
+                        right: -8,
+                        bottom: -8,
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          decoration: const BoxDecoration(color: AppColors.tertiaryFixedDim, shape: BoxShape.circle),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              Text('REGISTRO CONFIRMADO',
-                  textAlign: TextAlign.center,
-                  style: AppText.labelMd.copyWith(color: AppColors.primary, letterSpacing: 0.8)),
+              const Center(
+                child: StatusChip(
+                  label: 'REGISTRO CONFIRMADO',
+                  background: AppColors.surfaceContainer,
+                  foreground: AppColors.primary,
+                ),
+              ),
               const SizedBox(height: 8),
               Text('¡Asistencia registrada!',
                   textAlign: TextAlign.center,
@@ -122,13 +141,14 @@ class AttendanceDoneView extends StatelessWidget {
                           _DetailRow(
                             icon: Icons.calendar_today_outlined,
                             label: 'Fecha',
-                            value: DateFormatEs.long(vm.markedAt),
+                            value: '${DateFormatEs.long(vm.markedAt)} de ${vm.markedAt.year}',
                           ),
                           const SizedBox(height: 10),
                           _DetailRow(
                             icon: Icons.schedule,
                             label: 'Hora de registro',
                             value: DateFormatEs.time(vm.markedAt),
+                            big: true,
                           ),
                         ],
                       ),
@@ -148,13 +168,20 @@ class AttendanceDoneView extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: const BoxDecoration(color: AppColors.surfaceContainerLow, shape: BoxShape.circle),
+                        child: const Icon(Icons.bar_chart, color: AppColors.primaryContainer),
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('${vm.percent}% de asistencia en el curso',
                                 style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
-                            Text('${vm.present} de ${vm.total} clases asistidas',
+                            Text('${vm.present} de ${vm.total} ${vm.total == 1 ? 'clase asistida' : 'clases asistidas'}',
                                 style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
                           ],
                         ),
@@ -190,7 +217,8 @@ class _DetailRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  const _DetailRow({required this.icon, required this.label, required this.value});
+  final bool big; // La hora va más grande, como en el mockup
+  const _DetailRow({required this.icon, required this.label, required this.value, this.big = false});
 
   @override
   Widget build(BuildContext context) {
@@ -206,7 +234,12 @@ class _DetailRow extends StatelessWidget {
             spacing: 12,
             children: [
               Text(label, style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant)),
-              Text(value, style: AppText.labelLg.copyWith(color: AppColors.onSurface, fontWeight: FontWeight.w600)),
+              Text(
+                value,
+                style: big
+                    ? AppText.titleLg.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)
+                    : AppText.labelLg.copyWith(color: AppColors.onSurface, fontWeight: FontWeight.w600),
+              ),
             ],
           ),
         ),

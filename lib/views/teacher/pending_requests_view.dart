@@ -70,7 +70,7 @@ class PendingRequestsView extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        '${pending.length} pendientes',
+                        pending.length == 1 ? '1 pendiente' : '${pending.length} pendientes',
                         style: AppText.labelMd.copyWith(color: AppColors.onTertiaryFixed),
                       ),
                     ),
