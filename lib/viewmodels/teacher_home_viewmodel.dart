@@ -14,6 +14,7 @@ class TeacherHomeViewModel extends BaseViewModel {
   }
 
   bool isLoading = true;
+  String? error;
   List<Course> courses = [];
 
   /// "Prof. Ramírez": usa el primer apellido (la segunda palabra del nombre).
@@ -27,8 +28,13 @@ class TeacherHomeViewModel extends BaseViewModel {
 
   Future<void> loadCourses() async {
     isLoading = true;
+    error = null;
     notify();
-    courses = await _courseRepo.getTeacherCourses();
+    try {
+      courses = await _courseRepo.getTeacherCourses();
+    } catch (e) {
+      error = errorMessage(e);
+    }
     isLoading = false;
     notify();
   }

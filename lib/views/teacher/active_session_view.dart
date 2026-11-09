@@ -10,6 +10,8 @@ import '../widgets/app_card.dart';
 import '../widgets/confirm_dialog.dart';
 import '../widgets/detail_app_bar.dart';
 import '../widgets/initials_avatar.dart';
+import '../widgets/load_error.dart';
+import '../widgets/common.dart';
 
 /// Sesión activa del docente (mockup 17): QR que cambia cada 15 s,
 /// asistentes en vivo, tiempo restante y cierre de la asistencia.
@@ -38,8 +40,8 @@ class ActiveSessionView extends StatelessWidget {
   Future<void> _openManual(BuildContext context, ActiveSessionViewModel vm) async {
     final session = vm.session;
     if (session == null) return;
+    // Al volver no hace falta recargar: la lista escucha a Firestore en tiempo real.
     await Navigator.pushNamed(context, 'manual_attendance', arguments: session);
-    vm.refresh(); // Al volver se ven los que se marcaron a mano.
   }
 
   @override
@@ -58,9 +60,15 @@ class ActiveSessionView extends StatelessWidget {
     }
 
     if (session == null) {
-      return const Scaffold(
-        appBar: DetailAppBar(title: 'Sesión activa'),
-        body: Center(child: CircularProgressIndicator()),
+      // No se pudo abrir la clase (por ejemplo, ya se dictó hoy): se explica por qué.
+      final error = vm.error;
+      return Scaffold(
+        appBar: const DetailAppBar(title: 'Sesión activa'),
+        body: Center(
+          child: error == null
+              ? const CircularProgressIndicator()
+              : LoadError(message: error, onRetry: () => Navigator.pop(context)),
+        ),
       );
     }
 
@@ -70,63 +78,93 @@ class ActiveSessionView extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           _LiveHeader(session: session),
+          if (vm.error != null)
+            Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 0), child: ErrorBanner(vm.error!)),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Column(
               children: [
                 _QrCard(vm: vm, bluetooth: session.course.validateBluetooth),
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _StatCard(
-                        label: 'ASISTENCIA',
-                        value: '${vm.presentCount}',
-                        suffix: '/${vm.enrolledCount}',
-                        footer: '${vm.presentPercent}% del aula',
-                        footerColor: AppColors.tertiaryContainer,
-                        icon: Icons.groups_outlined,
+                // IntrinsicHeight + stretch: las dos tarjetas quedan de la misma altura.
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: _StatCard(
+                          label: 'ASISTENCIA',
+                          value: '${vm.presentCount}',
+                          suffix: '/${vm.enrolledCount}',
+                          footer: '${vm.presentPercent}% del aula',
+                          footerColor: AppColors.tertiaryContainer,
+                          icon: Icons.groups_outlined,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _StatCard(
-                        label: 'TIEMPO RESTANTE',
-                        value: vm.remainingLabel,
-                        footer: 'Cierre automático',
-                        footerColor: AppColors.onSurfaceVariant,
-                        icon: Icons.timer_outlined,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _StatCard(
+                          label: 'TIEMPO RESTANTE',
+                          value: vm.remainingLabel,
+                          footer: 'Cierre automático',
+                          footerColor: AppColors.onSurfaceVariant,
+                          icon: Icons.timer_outlined,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 if (vm.failReportCount > 0) ...[
                   const SizedBox(height: 16),
                   _FailReportBanner(count: vm.failReportCount, onTap: () => _openManual(context, vm)),
                 ],
                 const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Text('Registros recientes', style: AppText.titleLg.copyWith(color: AppColors.onSurface)),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryFixed,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text('${vm.presentCount}',
-                          style: AppText.labelLg.copyWith(color: AppColors.primaryContainer)),
-                    ),
-                    const Spacer(),
-                    const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.outline),
-                    ),
-                    const SizedBox(width: 6),
-                    Text('Actualizando', style: AppText.labelMd.copyWith(color: AppColors.primaryContainer)),
-                  ],
+                // El título se parte en dos líneas si hace falta, con el contador al lado.
+                // La palabra "Actualizando" solo se muestra si hay espacio (si no, queda el círculo).
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final showWord = constraints.maxWidth >= 360;
+                    return Row(
+                      children: [
+                        // Expanded: el título y el contador usan todo el espacio libre
+                        // (con Spacer, el espacio vacío se quedaba con la mitad del ancho).
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'Registros recientes',
+                                  style: AppText.titleLg.copyWith(color: AppColors.onSurface),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryFixed,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  '${vm.presentCount}',
+                                  style: AppText.labelLg.copyWith(color: AppColors.primaryContainer),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.outline),
+                        ),
+                        if (showWord) ...[
+                          const SizedBox(width: 6),
+                          Text('Actualizando', style: AppText.labelMd.copyWith(color: AppColors.primaryContainer)),
+                        ],
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
                 AppCard(
@@ -136,8 +174,10 @@ class ActiveSessionView extends StatelessWidget {
                       if (vm.recentRecords.isEmpty)
                         Padding(
                           padding: const EdgeInsets.all(24),
-                          child: Text('Aún nadie ha registrado asistencia.',
-                              style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant)),
+                          child: Text(
+                            'Aún nadie ha registrado asistencia.',
+                            style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant),
+                          ),
                         ),
                       for (var i = 0; i < vm.recentRecords.length; i++) ...[
                         if (i > 0) const Divider(height: 1, color: AppColors.surfaceContainer),
@@ -155,45 +195,88 @@ class ActiveSessionView extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           color: AppColors.surface,
-          child: Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 56,
-                  child: FilledButton.icon(
-                    onPressed: () => _openManual(context, vm),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.surfaceContainer,
-                      foregroundColor: AppColors.primaryContainer,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      textStyle: AppText.labelLg,
+          // LayoutBuilder mide el ancho: si cada botón queda angosto, el ícono va arriba
+          // del texto (así "manualmente" no se parte a la mitad); si hay espacio, al lado.
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final vertical = (constraints.maxWidth - 12) / 2 < 170;
+              return IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _ActionButton(
+                        icon: Icons.checklist,
+                        label: 'Marcar manualmente',
+                        background: AppColors.surfaceContainer,
+                        foreground: AppColors.primaryContainer,
+                        vertical: vertical,
+                        onPressed: () => _openManual(context, vm),
+                      ),
                     ),
-                    icon: const Icon(Icons.checklist, size: 20),
-                    label: const Text('Marcar manualmente'),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SizedBox(
-                  height: 56,
-                  child: FilledButton.icon(
-                    onPressed: vm.isClosing ? null : () => _confirmClose(context, vm),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primaryContainer,
-                      foregroundColor: AppColors.onPrimary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      textStyle: AppText.labelLg,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _ActionButton(
+                        icon: Icons.lock_outline,
+                        label: 'Cerrar asistencia',
+                        background: AppColors.primaryContainer,
+                        foreground: AppColors.onPrimary,
+                        vertical: vertical,
+                        onPressed: vm.isClosing ? null : () => _confirmClose(context, vm),
+                      ),
                     ),
-                    icon: const Icon(Icons.lock_outline, size: 20),
-                    label: const Text('Cerrar asistencia'),
-                  ),
+                  ],
                 ),
-              ),
-            ],
+              );
+            },
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Botón de la barra inferior. Con [vertical] el ícono va arriba del texto.
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color background;
+  final Color foreground;
+  final bool vertical;
+  final VoidCallback? onPressed;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.background,
+    required this.foreground,
+    required this.vertical,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Text(label, textAlign: TextAlign.center);
+    return FilledButton(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: background,
+        foregroundColor: foreground,
+        minimumSize: const Size(0, 56),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        textStyle: AppText.labelLg,
+      ),
+      child: vertical
+          ? Column(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 20), const SizedBox(height: 4), text])
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 20),
+                const SizedBox(width: 8),
+                Flexible(child: text),
+              ],
+            ),
     );
   }
 }
@@ -222,8 +305,10 @@ class _LiveHeader extends StatelessWidget {
                 decoration: const BoxDecoration(color: AppColors.absent, shape: BoxShape.circle),
               ),
               const SizedBox(width: 8),
-              Text('EN VIVO',
-                  style: AppText.labelLg.copyWith(color: AppColors.onPrimary, fontWeight: FontWeight.w700)),
+              Text(
+                'EN VIVO',
+                style: AppText.labelLg.copyWith(color: AppColors.onPrimary, fontWeight: FontWeight.w700),
+              ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -251,8 +336,12 @@ class _LiveHeader extends StatelessWidget {
             children: [
               const Icon(Icons.school_outlined, size: 16, color: AppColors.onPrimaryContainer),
               const SizedBox(width: 6),
-              Text('Clase #${session.number} · ${session.course.timeLabel}',
-                  style: AppText.bodyMd.copyWith(color: AppColors.onPrimaryContainer)),
+              Flexible(
+                child: Text(
+                  'Clase #${session.number} · ${session.course.timeLabel}',
+                  style: AppText.bodyMd.copyWith(color: AppColors.onPrimaryContainer),
+                ),
+              ),
             ],
           ),
         ],
@@ -294,9 +383,12 @@ class _QrCard extends StatelessWidget {
                     children: [
                       Icon(bluetooth ? Icons.sensors : Icons.qr_code_2, size: 18, color: AppColors.primaryContainer),
                       const SizedBox(width: 6),
-                      Text(
-                        bluetooth ? 'Señal Bluetooth activa' : 'Solo QR (Bluetooth desactivado)',
-                        style: AppText.labelLg.copyWith(color: AppColors.primaryContainer),
+                      Flexible(
+                        child: Text(
+                          bluetooth ? 'Señal Bluetooth activa' : 'Solo QR (Bluetooth desactivado)',
+                          textAlign: TextAlign.center,
+                          style: AppText.labelLg.copyWith(color: AppColors.primaryContainer),
+                        ),
                       ),
                     ],
                   ),
@@ -383,37 +475,54 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // La etiqueta va arriba a todo lo ancho y el ícono junto al número:
+    // así "TIEMPO RESTANTE" y "04:52" no se parten en pantallas angostas.
     return AppCard(
-      child: Row(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant, letterSpacing: 1)),
-                const SizedBox(height: 4),
-                Text.rich(
-                  TextSpan(
-                    text: value,
-                    children: [
-                      if (suffix != null)
-                        TextSpan(
-                          text: suffix,
-                          style: AppText.titleMd.copyWith(color: AppColors.onSurfaceVariant),
-                        ),
-                    ],
-                  ),
-                  style: AppText.headlineMd.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
-                ),
-                Text(footer, style: AppText.labelMd.copyWith(color: footerColor, fontWeight: FontWeight.w600)),
-              ],
-            ),
+          // FittedBox(scaleDown) achica la etiqueta solo si no cabe en una línea.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(label, style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant, letterSpacing: 1)),
           ),
-          Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(color: AppColors.primaryFixed, shape: BoxShape.circle),
-            child: Icon(icon, color: AppColors.primaryContainer),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text.rich(
+                    TextSpan(
+                      text: value,
+                      children: [
+                        if (suffix != null)
+                          TextSpan(
+                            text: suffix,
+                            style: AppText.titleMd.copyWith(color: AppColors.onSurfaceVariant),
+                          ),
+                      ],
+                    ),
+                    style: AppText.headlineMd.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: const BoxDecoration(color: AppColors.primaryFixed, shape: BoxShape.circle),
+                child: Icon(icon, size: 20, color: AppColors.primaryContainer),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            footer,
+            style: AppText.labelMd.copyWith(color: footerColor, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -473,15 +582,21 @@ class _RecordRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      // El "hace cuánto" va debajo del check: deja más ancho para el nombre.
       child: Row(
         children: [
-          InitialsAvatar(initials: record.initials, size: 48),
+          InitialsAvatar(initials: record.initials, size: 42),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(record.name, style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
+                Text(
+                  record.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.titleMd.copyWith(color: AppColors.onSurface),
+                ),
                 Text(
                   record.isManual ? 'Matrícula ${record.code} · Manual' : 'Matrícula ${record.code}',
                   style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
@@ -489,13 +604,19 @@ class _RecordRow extends StatelessWidget {
               ],
             ),
           ),
-          Text(timeAgo, style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant)),
-          const SizedBox(width: 10),
-          Container(
-            width: 34,
-            height: 34,
-            decoration: const BoxDecoration(color: AppColors.primaryFixed, shape: BoxShape.circle),
-            child: const Icon(Icons.check_circle, size: 22, color: AppColors.primaryContainer),
+          const SizedBox(width: 8),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: const BoxDecoration(color: AppColors.primaryFixed, shape: BoxShape.circle),
+                child: const Icon(Icons.check_circle, size: 20, color: AppColors.primaryContainer),
+              ),
+              const SizedBox(height: 4),
+              Text(timeAgo, style: AppText.labelSm.copyWith(color: AppColors.onSurfaceVariant)),
+            ],
           ),
         ],
       ),

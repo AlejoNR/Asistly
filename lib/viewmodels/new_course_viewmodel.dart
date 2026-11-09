@@ -76,16 +76,21 @@ class NewCourseViewModel extends BaseViewModel {
     final days = selectedDays.toList();
     days.sort(); // Lun, Mar, Mié... en orden.
 
-    final course = await _courseRepo.createCourse(
-      name: name.trim(),
-      group: group.trim(),
-      semester: semester.trim(),
-      days: days,
-      startTime: formatTime(startTime),
-      endTime: formatTime(endTime),
-      room: room.trim(),
-      teacherName: _authRepo.user?.fullName ?? '',
-    );
+    Course? course;
+    try {
+      course = await _courseRepo.createCourse(
+        name: name.trim(),
+        group: group.trim(),
+        semester: semester.trim(),
+        days: days,
+        startTime: formatTime(startTime),
+        endTime: formatTime(endTime),
+        room: room.trim(),
+        teacherName: _authRepo.user?.fullName ?? '',
+      );
+    } catch (e) {
+      error = errorMessage(e);
+    }
 
     isLoading = false;
     notify();

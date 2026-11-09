@@ -12,5 +12,5 @@ import 'main.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const AppState(initialRoute: 'demo'));
+  runApp(const AppState(initialRoute: 'demo', demo: true));
 }

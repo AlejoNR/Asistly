@@ -11,13 +11,19 @@ class TeacherCoursesViewModel extends BaseViewModel {
   }
 
   bool isLoading = true;
+  String? error;
   List<Course> _courses = [];
   String query = '';
 
   Future<void> loadCourses() async {
     isLoading = true;
+    error = null;
     notify();
-    _courses = await _repo.getTeacherCourses();
+    try {
+      _courses = await _repo.getTeacherCourses();
+    } catch (e) {
+      error = errorMessage(e);
+    }
     isLoading = false;
     notify();
   }

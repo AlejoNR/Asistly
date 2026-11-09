@@ -1,11 +1,13 @@
-/// Un registro de asistencia de un estudiante en una clase.
+/// Lo que le pasó a un estudiante en una clase: presente o ausente.
 ///
-/// En Firestore irá en `sesiones/{id}/asistencias/{uid}`.
+/// Se arma con `sesiones/{id}` (presentes y ausentes de la clase cerrada)
+/// y `sesiones/{id}/asistencias/{uid}` (hora y método de su registro).
 class AttendanceRecord {
   final String sessionId;
   final String courseId;
   final String courseName;
-  final DateTime date;
+  final int number; // Número de clase
+  final DateTime date; // Hora del registro; si faltó, la hora de la clase
   final bool present; // Solo hay dos estados: presente o ausente
   final bool manual; // true si el docente la marcó a mano
 
@@ -13,6 +15,7 @@ class AttendanceRecord {
     required this.sessionId,
     required this.courseId,
     required this.courseName,
+    required this.number,
     required this.date,
     required this.present,
     this.manual = false,

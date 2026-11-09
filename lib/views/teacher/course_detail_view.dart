@@ -8,7 +8,9 @@ import '../../theme/app_theme.dart';
 import '../../util/date_format.dart';
 import '../../viewmodels/course_detail_viewmodel.dart';
 import '../widgets/app_card.dart';
+import '../widgets/common.dart';
 import '../widgets/detail_app_bar.dart';
+import '../widgets/load_error.dart';
 
 /// Detalle del curso del docente (mockup 12).
 class CourseDetailView extends StatelessWidget {
@@ -20,9 +22,13 @@ class CourseDetailView extends StatelessWidget {
     final course = vm.course;
 
     if (vm.isLoading || course == null) {
-      return const Scaffold(
-        appBar: DetailAppBar(title: 'Detalle del curso'),
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        appBar: const DetailAppBar(title: 'Detalle del curso'),
+        body: Center(
+          child: vm.error != null
+              ? LoadError(message: vm.error!, onRetry: vm.load)
+              : const CircularProgressIndicator(),
+        ),
       );
     }
 
@@ -42,27 +48,23 @@ class CourseDetailView extends StatelessWidget {
             _OfficialListCard(course: course, onReturn: vm.load),
             const SizedBox(height: 16),
             _SessionSettingsCard(vm: vm, course: course),
+            if (vm.saveError != null) ...[const SizedBox(height: 8), ErrorBanner(vm.saveError!)],
             const SizedBox(height: 20),
             _StartClassButton(vm: vm, course: course),
             const SizedBox(height: 24),
             Row(
               children: [
                 Expanded(
-                  child: Text('Clases anteriores',
-                      style: AppText.headlineSm.copyWith(color: AppColors.onSurface)),
+                  child: Text('Clases anteriores', style: AppText.headlineSm.copyWith(color: AppColors.onSurface)),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pushNamed(context, 'class_history', arguments: course.id),
-                  child: Text('Ver historial',
-                      style: AppText.labelLg.copyWith(color: AppColors.primaryContainer)),
+                  child: Text('Ver historial', style: AppText.labelLg.copyWith(color: AppColors.primaryContainer)),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            for (final session in vm.recentSessions) ...[
-              _SessionRow(session: session),
-              const SizedBox(height: 8),
-            ],
+            for (final session in vm.recentSessions) ...[_SessionRow(session: session), const SizedBox(height: 8)],
           ],
         ),
       ),
@@ -82,19 +84,20 @@ class _HeroCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Stack(
         children: [
-          Positioned.fill(
-            child: Image.asset('assets/images/login_hero.jpg', fit: BoxFit.cover),
-          ),
+          Positioned.fill(child: Image.asset('assets/images/login_hero.jpg', fit: BoxFit.cover)),
           // Capa azul encima de la foto para que el texto se lea bien.
-          Positioned.fill(
-            child: Container(color: AppColors.primaryContainer.withValues(alpha: 0.85)),
-          ),
+          Positioned.fill(child: Container(color: AppColors.primaryContainer.withValues(alpha: 0.85))),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                // Wrap en vez de Row: si en pantallas angostas no caben los dos chips
+                // en una línea, el segundo baja a la siguiente en vez de desbordarse.
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -118,7 +121,6 @@ class _HeroCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
@@ -162,35 +164,37 @@ class _SummaryCard extends StatelessWidget {
     const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
     final scheduleRows = <Widget>[];
     for (final day in course.days) {
-      scheduleRows.add(Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.primaryFixed,
-                borderRadius: BorderRadius.circular(10),
+      scheduleRows.add(
+        Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(12)),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: AppColors.primaryFixed, borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.primaryContainer),
               ),
-              child: const Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.primaryContainer),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                '${dayNames[day - 1]} ${course.timeLabel}',
-                style: AppText.titleLg.copyWith(color: AppColors.onSurface),
+              const SizedBox(width: 12),
+              // El aula va debajo de la hora: así la hora cabe en una línea aun en pantallas angostas.
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${dayNames[day - 1]} ${course.timeLabel}',
+                      style: AppText.titleMd.copyWith(color: AppColors.onSurface),
+                    ),
+                    Text(course.room, style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+                  ],
+                ),
               ),
-            ),
-            Text(course.room, style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant)),
-          ],
+            ],
+          ),
         ),
-      ));
+      );
     }
 
     return AppCard(
@@ -200,13 +204,13 @@ class _SummaryCard extends StatelessWidget {
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                SizedBox(
+            decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(12)),
+            // LayoutBuilder dice cuánto ancho hay. En pantallas angostas (o con letra grande)
+            // los inscritos bajan a su propia línea para que el texto no quede apretado.
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final narrow = constraints.maxWidth < 320;
+                final ring = SizedBox(
                   width: 60,
                   height: 60,
                   child: Stack(
@@ -228,31 +232,61 @@ class _SummaryCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Asistencia promedio', style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
-                      Text(comment, style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
-                    ],
-                  ),
-                ),
-                Column(
+                );
+                final texts = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Asistencia promedio', style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
+                    Text(comment, style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+                  ],
+                );
+                final enrolled = Column(
                   children: [
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.group_outlined, size: 18, color: AppColors.primaryContainer),
                         const SizedBox(width: 4),
-                        Text('${course.enrolledCount}',
-                            style: AppText.headlineSm.copyWith(color: AppColors.primary)),
+                        Text('${course.enrolledCount}', style: AppText.headlineSm.copyWith(color: AppColors.primary)),
                       ],
                     ),
                     Text('Inscritos', style: AppText.labelMd.copyWith(color: AppColors.onSurfaceVariant)),
                   ],
-                ),
-              ],
+                );
+
+                if (!narrow) {
+                  return Row(
+                    children: [
+                      ring,
+                      const SizedBox(width: 16),
+                      Expanded(child: texts),
+                      enrolled,
+                    ],
+                  );
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        ring,
+                        const SizedBox(width: 12),
+                        Expanded(child: texts),
+                      ],
+                    ),
+                    const Divider(height: 24, color: AppColors.surfaceContainerHigh),
+                    Row(
+                      children: [
+                        const Icon(Icons.group_outlined, size: 18, color: AppColors.primaryContainer),
+                        const SizedBox(width: 6),
+                        Text('${course.enrolledCount}', style: AppText.titleLg.copyWith(color: AppColors.primary)),
+                        const SizedBox(width: 6),
+                        Text('inscritos', style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant)),
+                      ],
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -269,36 +303,44 @@ class _QuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _QuickAction(
-            icon: Icons.group_outlined,
-            title: 'Estudiantes',
-            subtitle: course.pendingCount > 0 ? '${course.pendingCount} pendientes' : 'Ver lista',
-            badge: course.pendingCount,
-            onTap: () => Navigator.pushNamed(context, 'course_students', arguments: course.id).then((value) => onReturn()),
+    // IntrinsicHeight + stretch: las tres tarjetas toman la altura de la más alta,
+    // así crecen juntas si la letra del celular es grande.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _QuickAction(
+              icon: Icons.group_outlined,
+              title: 'Estudiantes',
+              subtitle: course.pendingCount == 0
+                  ? 'Ver lista'
+                  : (course.pendingCount == 1 ? '1 pendiente' : '${course.pendingCount} pendientes'),
+              badge: course.pendingCount,
+              onTap: () =>
+                  Navigator.pushNamed(context, 'course_students', arguments: course.id).then((value) => onReturn()),
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _QuickAction(
-            icon: Icons.bar_chart,
-            title: 'Reporte',
-            subtitle: 'Ver estadísticas',
-            onTap: () => Navigator.pushNamed(context, 'course_report', arguments: course.id),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _QuickAction(
+              icon: Icons.bar_chart,
+              title: 'Reporte',
+              subtitle: 'Ver estadísticas',
+              onTap: () => Navigator.pushNamed(context, 'course_report', arguments: course.id),
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _QuickAction(
-            icon: Icons.key,
-            title: 'Código',
-            subtitle: course.enrollCode,
-            onTap: () => Navigator.pushNamed(context, 'course_created', arguments: course),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _QuickAction(
+              icon: Icons.key,
+              title: 'Código',
+              subtitle: course.enrollCode,
+              onTap: () => Navigator.pushNamed(context, 'course_created', arguments: course),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -322,6 +364,7 @@ class _QuickAction extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       clipBehavior: Clip.none,
+      fit: StackFit.expand, // La tarjeta llena toda la altura que le da la fila
       children: [
         Material(
           color: AppColors.surfaceContainerLow,
@@ -330,21 +373,27 @@ class _QuickAction extends StatelessWidget {
             onTap: onTap,
             borderRadius: BorderRadius.circular(16),
             child: Container(
-              height: 104,
+              // Altura mínima (no fija): si la letra es grande, la tarjeta crece en vez de desbordarse.
+              constraints: const BoxConstraints(minHeight: 104),
               width: double.infinity,
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(icon, size: 26, color: AppColors.primaryContainer),
                   const SizedBox(height: 6),
-                  Text(title, style: AppText.labelLg.copyWith(color: AppColors.onSurface, fontWeight: FontWeight.w700)),
-                  Text(
-                    subtitle,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.labelSm.copyWith(color: AppColors.onSurfaceVariant),
+                  // FittedBox(scaleDown) achica un poco la palabra si no cabe,
+                  // en vez de partirla en dos líneas ("Estudiant / es").
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      title,
+                      style: AppText.labelLg.copyWith(color: AppColors.onSurface, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(subtitle, style: AppText.labelSm.copyWith(color: AppColors.onSurfaceVariant)),
                   ),
                 ],
               ),
@@ -361,7 +410,10 @@ class _QuickAction extends StatelessWidget {
               height: 26,
               alignment: Alignment.center,
               decoration: const BoxDecoration(color: AppColors.tertiaryFixed, shape: BoxShape.circle),
-              child: Text('$badge', style: AppText.labelMd.copyWith(color: AppColors.onTertiaryFixed, fontWeight: FontWeight.w700)),
+              child: Text(
+                '$badge',
+                style: AppText.labelMd.copyWith(color: AppColors.onTertiaryFixed, fontWeight: FontWeight.w700),
+              ),
             ),
           ),
       ],
@@ -418,9 +470,9 @@ class _OfficialListCard extends StatelessWidget {
                     Text(
                       loaded
                           ? '${course.officialListCount} estudiantes'
-                              '${importedAt != null ? ' · ${DateFormatEs.short(importedAt)}' : ''}'
+                                '${importedAt != null ? ' · ${DateFormatEs.short(importedAt)}' : ''}'
                           : 'Súbela para que los estudiantes de la lista se inscriban '
-                              'automáticamente al unirse con el código.',
+                                'automáticamente al unirse con el código.',
                       style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant),
                     ),
                   ],
@@ -430,7 +482,8 @@ class _OfficialListCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           OutlinedButton.icon(
-            onPressed: () => Navigator.pushNamed(context, 'import_list', arguments: course.id).then((value) => onReturn()),
+            onPressed: () =>
+                Navigator.pushNamed(context, 'import_list', arguments: course.id).then((value) => onReturn()),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.primary,
               minimumSize: const Size.fromHeight(48),
@@ -463,15 +516,11 @@ class _SessionSettingsCard extends StatelessWidget {
               const Icon(Icons.tune, color: AppColors.primaryContainer),
               const SizedBox(width: 8),
               Expanded(
-                child: Text('Configuración de la clase',
-                    style: AppText.titleLg.copyWith(color: AppColors.onSurface)),
+                child: Text('Configuración de la clase', style: AppText.titleLg.copyWith(color: AppColors.onSurface)),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryFixed,
-                  borderRadius: BorderRadius.circular(999),
-                ),
+                decoration: BoxDecoration(color: AppColors.primaryFixed, borderRadius: BorderRadius.circular(999)),
                 child: Text('Automático', style: AppText.labelMd.copyWith(color: AppColors.primaryContainer)),
               ),
             ],
@@ -508,6 +557,7 @@ class _SessionSettingsCard extends StatelessWidget {
             icon: Icons.bluetooth_searching,
             title: 'Validar por Bluetooth',
             subtitle: 'Verificar proximidad física al aula',
+            smallTrailing: true,
             trailing: Switch(
               value: course.validateBluetooth,
               onChanged: vm.setValidateBluetooth,
@@ -525,40 +575,65 @@ class _SettingRow extends StatelessWidget {
   final String title;
   final String subtitle;
   final Widget trailing;
+  final bool smallTrailing; // true para controles chicos (un Switch), que siempre caben al lado
 
-  const _SettingRow({required this.icon, required this.title, required this.subtitle, required this.trailing});
+  const _SettingRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.trailing,
+    this.smallTrailing = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final iconBox = Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(color: AppColors.surfaceContainer, borderRadius: BorderRadius.circular(10)),
+      child: Icon(icon, size: 22, color: AppColors.primary),
+    );
+    final texts = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
+        Text(subtitle, style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+      ],
+    );
+
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainer,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 22, color: AppColors.primary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(12)),
+      // Si el control de la derecha (los botones - / +) deja muy poco espacio al texto,
+      // el control baja a su propia línea, alineado a la derecha.
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final narrow = constraints.maxWidth < 300 && !smallTrailing;
+          if (!narrow) {
+            return Row(
               children: [
-                Text(title, style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
-                Text(subtitle, style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+                iconBox,
+                const SizedBox(width: 12),
+                Expanded(child: texts),
+                trailing,
               ],
-            ),
-          ),
-          trailing,
-        ],
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                children: [
+                  iconBox,
+                  const SizedBox(width: 12),
+                  Expanded(child: texts),
+                ],
+              ),
+              const SizedBox(height: 8),
+              trailing,
+            ],
+          );
+        },
       ),
     );
   }
@@ -637,10 +712,7 @@ class _SessionRow extends StatelessWidget {
           Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
+            decoration: BoxDecoration(color: AppColors.surfaceContainer, borderRadius: BorderRadius.circular(12)),
             child: const Icon(Icons.event_available_outlined, color: AppColors.primaryContainer),
           ),
           const SizedBox(width: 12),
@@ -648,12 +720,11 @@ class _SessionRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Número y fecha en líneas separadas: se leen bien aunque la pantalla sea angosta.
+                Text('Clase #${session.number}', style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
+                Text(DateFormatEs.short(session.date), style: AppText.bodySm.copyWith(color: AppColors.onSurface)),
                 Text(
-                  'Clase #${session.number} · ${DateFormatEs.short(session.date)}',
-                  style: AppText.titleMd.copyWith(color: AppColors.onSurface),
-                ),
-                Text(
-                  '${session.presentCount} de ${session.totalCount} alumnos presentes',
+                  '${session.presentCount} de ${session.totalCount} presentes',
                   style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
                 ),
               ],

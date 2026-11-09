@@ -61,10 +61,7 @@ class CourseCreatedView extends StatelessWidget {
                           color: AppColors.primaryFixed,
                           borderRadius: BorderRadius.circular(999),
                         ),
-                        child: Text(
-                          'Recomendado',
-                          style: AppText.labelMd.copyWith(color: AppColors.primaryContainer),
-                        ),
+                        child: Text('Recomendado', style: AppText.labelMd.copyWith(color: AppColors.primaryContainer)),
                       ),
                     ],
                   ),
@@ -75,10 +72,7 @@ class CourseCreatedView extends StatelessWidget {
                       Container(
                         width: 48,
                         height: 48,
-                        decoration: const BoxDecoration(
-                          color: AppColors.primaryFixed,
-                          shape: BoxShape.circle,
-                        ),
+                        decoration: const BoxDecoration(color: AppColors.primaryFixed, shape: BoxShape.circle),
                         child: const Icon(Icons.cloud_upload_outlined, color: AppColors.primaryContainer),
                       ),
                       const SizedBox(width: 12),
@@ -153,13 +147,12 @@ class CourseCreatedView extends StatelessWidget {
                           Container(
                             width: 8,
                             height: 8,
-                            decoration: const BoxDecoration(
-                              color: AppColors.secondary,
-                              shape: BoxShape.circle,
-                            ),
+                            decoration: const BoxDecoration(color: AppColors.secondary, shape: BoxShape.circle),
                           ),
                           const SizedBox(width: 10),
-                          Text(line, style: AppText.bodyMd.copyWith(color: AppColors.primaryContainer)),
+                          Expanded(
+                            child: Text(line, style: AppText.bodyMd.copyWith(color: AppColors.primaryContainer)),
+                          ),
                         ],
                       ),
                     ),
@@ -209,18 +202,12 @@ class _SuccessBadge extends StatelessWidget {
             Container(
               width: 150,
               height: 150,
-              decoration: BoxDecoration(
-                color: AppColors.presentDot.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: AppColors.presentDot.withValues(alpha: 0.15), shape: BoxShape.circle),
             ),
             Container(
               width: 76,
               height: 76,
-              decoration: BoxDecoration(
-                color: AppColors.presentDot.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: AppColors.presentDot.withValues(alpha: 0.2), shape: BoxShape.circle),
               child: const Icon(Icons.check_circle, size: 44, color: AppColors.present),
             ),
             Positioned(
@@ -263,12 +250,19 @@ class _CodeCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
             child: Column(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _Pill(text: course.group),
-                    _Pill(text: course.room, icon: Icons.meeting_room_outlined),
-                  ],
+                // Wrap: si el grupo y el aula no caben en una línea, el aula baja.
+                // SizedBox a todo el ancho: sin él, el Wrap se encoge y no los separa a los lados.
+                SizedBox(
+                  width: double.infinity,
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _Pill(text: course.group),
+                      _Pill(text: course.room, icon: Icons.meeting_room_outlined),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -313,12 +307,18 @@ class _CodeCard extends StatelessWidget {
                         children: [
                           const Icon(Icons.key, size: 26, color: AppColors.secondary),
                           const SizedBox(width: 10),
-                          Text(
-                            course.enrollCode,
-                            style: AppText.headlineLg.copyWith(
-                              color: AppColors.primary,
-                              fontFamily: 'monospace',
-                              letterSpacing: 3,
+                          // FittedBox(scaleDown): el código se achica un poco si no cabe, sin partirse.
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                course.enrollCode,
+                                style: AppText.headlineLg.copyWith(
+                                  color: AppColors.primary,
+                                  fontFamily: 'monospace',
+                                  letterSpacing: 3,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -357,17 +357,11 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainer,
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: BoxDecoration(color: AppColors.surfaceContainer, borderRadius: BorderRadius.circular(8)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[
-            Icon(icon, size: 18, color: AppColors.onSurfaceVariant),
-            const SizedBox(width: 4),
-          ],
+          if (icon != null) ...[Icon(icon, size: 18, color: AppColors.onSurfaceVariant), const SizedBox(width: 4)],
           Text(text, style: AppText.labelLg.copyWith(color: AppColors.primaryContainer)),
         ],
       ),

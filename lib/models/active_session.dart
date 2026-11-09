@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'course.dart';
 
 /// Una clase abierta en este momento (sesión de asistencia en curso).
@@ -24,6 +26,29 @@ class ActiveSession {
   DateTime get endsAt => startedAt.add(Duration(minutes: registrationMinutes));
 }
 
+/// Una clase abierta tal como la ve el estudiante: no incluye el secreto,
+/// que solo conoce el docente.
+class OpenClass {
+  final String sessionId;
+  final Course course;
+  final DateTime startedAt;
+  final int registrationMinutes;
+  final bool validateBluetooth;
+  final bool alreadyMarked; // El estudiante ya tiene asistencia en esta clase
+
+  const OpenClass({
+    required this.sessionId,
+    required this.course,
+    required this.startedAt,
+    required this.registrationMinutes,
+    required this.validateBluetooth,
+    this.alreadyMarked = false,
+  });
+
+  /// Momento en que termina el tiempo para registrarse.
+  DateTime get endsAt => startedAt.add(Duration(minutes: registrationMinutes));
+}
+
 /// Una asistencia registrada en la sesión.
 ///
 /// En Firestore irá en `sesiones/{id}/asistencias/{uid}`.
@@ -44,6 +69,19 @@ class SessionAttendance {
     this.reason,
   });
 
+  /// Lee una asistencia de `sesiones/{id}/asistencias/{uid}`.
+  factory SessionAttendance.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data() ?? const {};
+    return SessionAttendance(
+      uid: doc.id,
+      name: data['nombre'] as String? ?? '',
+      code: data['codigo'] as String? ?? '',
+      markedAt: (data['hora'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      method: data['metodo'] as String? ?? 'qr',
+      reason: data['motivo'] as String?,
+    );
+  }
+
   bool get isManual => method == 'manual';
 
   String get initials {
@@ -61,4 +99,9 @@ class FailReport {
   final DateTime reportedAt;
 
   const FailReport({required this.uid, required this.reportedAt});
+
+  factory FailReport.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data() ?? const {};
+    return FailReport(uid: doc.id, reportedAt: (data['hora'] as Timestamp?)?.toDate() ?? DateTime.now());
+  }
 }

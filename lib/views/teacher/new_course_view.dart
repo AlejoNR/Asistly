@@ -58,12 +58,7 @@ class _NewCourseViewState extends State<NewCourseView> {
     if (!_formKey.currentState!.validate()) return;
 
     final vm = Provider.of<NewCourseViewModel>(context, listen: false);
-    final course = await vm.create(
-      name: _name.text,
-      group: _group.text,
-      semester: _semester.text,
-      room: _room.text,
-    );
+    final course = await vm.create(name: _name.text, group: _group.text, semester: _semester.text, room: _room.text);
     if (!mounted || course == null) return;
     // Se reemplaza esta pantalla para que "atrás" no vuelva al formulario.
     Navigator.pushReplacementNamed(context, 'course_created', arguments: course);
@@ -170,10 +165,7 @@ class _NewCourseViewState extends State<NewCourseView> {
                   ],
                 ),
               ),
-              if (vm.error != null) ...[
-                const SizedBox(height: 16),
-                ErrorBanner(vm.error!),
-              ],
+              if (vm.error != null) ...[const SizedBox(height: 16), ErrorBanner(vm.error!)],
               const SizedBox(height: 32),
               PrimaryButton(
                 label: 'Crear curso',
@@ -214,7 +206,9 @@ class _LabeledField extends StatelessWidget {
           children: [
             Icon(icon, size: 20, color: AppColors.primaryContainer),
             const SizedBox(width: 6),
-            Text(label, style: AppText.titleMd.copyWith(color: AppColors.primary)),
+            Flexible(
+              child: Text(label, style: AppText.titleMd.copyWith(color: AppColors.primary)),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -234,10 +228,7 @@ class _FilledInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide.none,
-    );
+    final border = OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none);
     return TextFormField(
       controller: controller,
       validator: validator,
@@ -251,9 +242,7 @@ class _FilledInput extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: border,
         enabledBorder: border,
-        focusedBorder: border.copyWith(
-          borderSide: const BorderSide(color: AppColors.primaryContainer, width: 1.5),
-        ),
+        focusedBorder: border.copyWith(borderSide: const BorderSide(color: AppColors.primaryContainer, width: 1.5)),
         errorBorder: border.copyWith(borderSide: const BorderSide(color: AppColors.error)),
         focusedErrorBorder: border.copyWith(borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
       ),
@@ -272,7 +261,9 @@ class _CardTitle extends StatelessWidget {
       children: [
         Icon(icon, size: 22, color: AppColors.primaryContainer),
         const SizedBox(width: 8),
-        Text(title, style: AppText.titleMd.copyWith(color: AppColors.primary)),
+        Flexible(
+          child: Text(title, style: AppText.titleMd.copyWith(color: AppColors.primary)),
+        ),
       ],
     );
   }
@@ -289,7 +280,10 @@ class _SmallLabel extends StatelessWidget {
       children: [
         Icon(icon, size: 16, color: AppColors.onSurfaceVariant),
         const SizedBox(width: 4),
-        Text(text, style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant)),
+        // Flexible: en media pantalla con letra grande, el texto baja de línea en vez de desbordarse.
+        Flexible(
+          child: Text(text, style: AppText.bodyMd.copyWith(color: AppColors.onSurfaceVariant)),
+        ),
       ],
     );
   }
@@ -311,28 +305,34 @@ class _DayChips extends StatelessWidget {
       final day = i + 1; // 1 = lunes
       final isOn = selected.contains(day);
       if (i > 0) chips.add(const SizedBox(width: 6));
-      chips.add(Expanded(
-        child: InkWell(
-          onTap: () => onToggle(day),
-          borderRadius: BorderRadius.circular(16),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            height: 56,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: isOn ? AppColors.primaryContainer : AppColors.surfaceContainer,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Text(
-              _labels[i],
-              style: AppText.labelLg.copyWith(
-                color: isOn ? AppColors.onPrimary : AppColors.onSurfaceVariant,
-                fontWeight: isOn ? FontWeight.w700 : FontWeight.w500,
+      chips.add(
+        Expanded(
+          child: InkWell(
+            onTap: () => onToggle(day),
+            borderRadius: BorderRadius.circular(16),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              height: 56,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              decoration: BoxDecoration(
+                color: isOn ? AppColors.primaryContainer : AppColors.surfaceContainer,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  _labels[i],
+                  style: AppText.labelLg.copyWith(
+                    color: isOn ? AppColors.onPrimary : AppColors.onSurfaceVariant,
+                    fontWeight: isOn ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
               ),
             ),
           ),
         ),
-      ));
+      );
     }
     return Row(children: chips);
   }
@@ -357,18 +357,16 @@ class _TimeBox extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Container(
-            height: 52,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(12),
-            ),
+            constraints: const BoxConstraints(minHeight: 52),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(12)),
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    value,
-                    style: AppText.titleLg.copyWith(color: AppColors.onSurface, letterSpacing: 1),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(value, style: AppText.titleLg.copyWith(color: AppColors.onSurface, letterSpacing: 1)),
                   ),
                 ),
                 const Icon(Icons.schedule, size: 20, color: AppColors.onSurface),

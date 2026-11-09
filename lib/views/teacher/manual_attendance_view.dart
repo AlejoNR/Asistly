@@ -17,7 +17,10 @@ class ManualAttendanceView extends StatelessWidget {
   Future<void> _save(BuildContext context, ManualAttendanceViewModel vm) async {
     final count = await vm.save();
     if (!context.mounted || count == 0) return;
-    showAppSnackBar(context, count == 1 ? '1 asistencia registrada manualmente.' : '$count asistencias registradas manualmente.');
+    showAppSnackBar(
+      context,
+      count == 1 ? '1 asistencia registrada manualmente.' : '$count asistencias registradas manualmente.',
+    );
     Navigator.pop(context);
   }
 
@@ -41,10 +44,7 @@ class ManualAttendanceView extends StatelessWidget {
             Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.primaryFixed,
-                borderRadius: BorderRadius.circular(12),
-              ),
+              decoration: BoxDecoration(color: AppColors.primaryFixed, borderRadius: BorderRadius.circular(12)),
               child: const Icon(Icons.how_to_reg_outlined, color: AppColors.primaryContainer),
             ),
             const SizedBox(width: 12),
@@ -52,9 +52,18 @@ class ManualAttendanceView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Marcar manualmente', style: AppText.titleLg.copyWith(color: AppColors.onSurface)),
-                  Text('${course.name} · ${course.room}',
-                      style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),
+                  Text(
+                    'Marcar manualmente',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.titleMd.copyWith(color: AppColors.onSurface),
+                  ),
+                  Text(
+                    '${course.name} · ${course.room}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
+                  ),
                 ],
               ),
             ),
@@ -74,30 +83,39 @@ class ManualAttendanceView extends StatelessWidget {
                     filled: true,
                     fillColor: AppColors.surfaceContainerLow,
                     contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                   ),
                 ),
+                if (vm.error != null) ...[const SizedBox(height: 12), ErrorBanner(vm.error!)],
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Text('Seleccionar estudiantes', style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryFixed,
-                        borderRadius: BorderRadius.circular(999),
+                    // Expanded + Wrap: título y contador usan el espacio que sobra
+                    // y bajan de línea si hace falta, sin desbordarse.
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text('Seleccionar estudiantes', style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryFixed,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              '${vm.selected.length}',
+                              style: AppText.labelMd.copyWith(color: AppColors.primaryContainer),
+                            ),
+                          ),
+                        ],
                       ),
-                      child: Text('${vm.selected.length}',
-                          style: AppText.labelMd.copyWith(color: AppColors.primaryContainer)),
                     ),
-                    const Spacer(),
                     TextButton(
                       onPressed: vm.pending.isEmpty ? null : vm.toggleAll,
-                      child: Text(vm.allSelected ? 'Quitar todos' : 'Seleccionar todos'),
+                      child: Text(vm.allSelected ? 'Quitar todos' : 'Marcar todos'),
                     ),
                   ],
                 ),
@@ -117,8 +135,7 @@ class ManualAttendanceView extends StatelessWidget {
                     color: AppColors.tertiaryContainer,
                     title: 'Reportaron falla (${vm.reportedStudents.length})',
                   ),
-                  for (final student in vm.reportedStudents)
-                    _SelectRow(vm: vm, student: student, highlighted: true),
+                  for (final student in vm.reportedStudents) _SelectRow(vm: vm, student: student, highlighted: true),
                 ],
                 if (vm.otherStudents.isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -233,10 +250,7 @@ class _SelectRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: highlighted ? const Color(0xFFFFF8E6) : AppColors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isSelected ? AppColors.primaryContainer : Colors.transparent,
-          width: 1.5,
-        ),
+        border: Border.all(color: isSelected ? AppColors.primaryContainer : Colors.transparent, width: 1.5),
       ),
       child: InkWell(
         onTap: () => vm.toggle(student),

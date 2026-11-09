@@ -11,7 +11,7 @@ import '../util/session_codes.dart';
 import 'base_viewmodel.dart';
 
 /// ViewModel de la Sesión activa del docente: QR rotativo, cuenta regresiva
-/// y lista de asistencias que se actualiza sola.
+/// y lista de asistencias que se actualiza sola (en tiempo real con Firestore).
 class ActiveSessionViewModel extends BaseViewModel {
   final SessionRepository _sessionRepo;
   final CourseRepository _courseRepo;
@@ -29,51 +29,88 @@ class ActiveSessionViewModel extends BaseViewModel {
 
   bool isClosing = false;
 
+  /// Error al abrir la clase (por ejemplo, si ya se dictó hoy) o al cerrarla.
+  String? error;
+
   /// Cuando la asistencia se cierra (a mano o sola), aquí queda el resumen
   /// y la vista navega a "Asistencia cerrada".
   ClassSession? closedSession;
 
   Timer? _clockTimer; // cada segundo
-  Timer? _refreshTimer; // cada 3 segundos
+
+  // Suscripciones a los Streams de Firestore. Un StreamSubscription es "estar
+  // escuchando": cada vez que cambian los datos se ejecuta la función. Hay que
+  // cancelarlas al salir de la pantalla (ver dispose).
+  StreamSubscription<List<SessionAttendance>>? _attendanceSub;
+  StreamSubscription<List<FailReport>>? _reportsSub;
+  List<FailReport> _reports = [];
+
+  int _publishedWindow = -1; // Ventana de 15 s cuyos códigos ya se guardaron
 
   Future<void> _start() async {
     // Mantiene la pantalla encendida mientras la sesión está abierta.
     WakelockPlus.enable();
 
-    session = await _sessionRepo.startOrResume(courseId);
-    final students = await _courseRepo.getCourseStudents(courseId);
-    enrolledCount = 0;
-    for (final student in students) {
-      if (student.status == EnrollmentStatus.enrolled) enrolledCount++;
+    try {
+      session = await _sessionRepo.startOrResume(courseId);
+      final students = await _courseRepo.getCourseStudents(courseId);
+      enrolledCount = 0;
+      for (final student in students) {
+        if (student.status == EnrollmentStatus.enrolled) enrolledCount++;
+      }
+    } catch (e) {
+      error = errorMessage(e);
+      WakelockPlus.disable();
+      notify();
+      return;
     }
-    await refresh();
 
+    final current = session!;
+    _attendanceSub = _sessionRepo.watchAttendance(current.id).listen((list) {
+      records = list;
+      _countReports();
+      notify();
+    });
+    _reportsSub = _sessionRepo.watchFailReports(current.id).listen((list) {
+      _reports = list;
+      _countReports();
+      notify();
+    });
+
+    _tick();
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (timer) => _tick());
-    _refreshTimer = Timer.periodic(const Duration(seconds: 3), (timer) => refresh());
   }
 
-  /// Trae las asistencias y los reportes de falla más recientes.
-  Future<void> refresh() async {
-    final current = session;
-    if (current == null || closedSession != null) return;
-    records = await _sessionRepo.getAttendance(current.id);
-    final reports = await _sessionRepo.getFailReports(current.id);
-    // Solo cuentan los reportes de quienes aún no tienen asistencia.
+  /// Solo cuentan los reportes de falla de quienes aún no tienen asistencia.
+  void _countReports() {
     failReportCount = 0;
-    for (final report in reports) {
+    for (final report in _reports) {
       var alreadyMarked = false;
       for (final record in records) {
         if (record.uid == report.uid) alreadyMarked = true;
       }
       if (!alreadyMarked) failReportCount++;
     }
-    notify();
   }
 
   void _tick() {
     now = DateTime.now();
-    // Cierre automático al acabar el tiempo de registro.
-    if (session != null && remaining.inSeconds <= 0 && !isClosing && closedSession == null) {
+    final current = session;
+    if (current == null || closedSession != null) return;
+
+    // Cada vez que empieza una ventana de 15 s se guardan los códigos nuevos,
+    // para que las reglas de Firestore puedan validar al estudiante.
+    final window = SessionCodes.windowAt(now);
+    if (window != _publishedWindow) {
+      _publishedWindow = window;
+      _sessionRepo.publishTokens(current, now).catchError((e) {
+        _publishedWindow = -1; // Se reintenta en el siguiente segundo
+      });
+    }
+
+    // Cierre automático al acabar el tiempo de registro. Si falló (error != null),
+    // no se reintenta solo cada segundo: el docente toca "Cerrar asistencia".
+    if (remaining.inSeconds <= 0 && !isClosing && error == null) {
       closeSession();
     }
     notify();
@@ -130,10 +167,20 @@ class ActiveSessionViewModel extends BaseViewModel {
   Future<void> closeSession() async {
     if (isClosing || closedSession != null) return;
     isClosing = true;
+    error = null;
     notify();
+    try {
+      closedSession = await _sessionRepo.close(courseId);
+    } catch (e) {
+      // No se pudo cerrar (por ejemplo, sin internet): la clase sigue abierta y se puede reintentar.
+      error = errorMessage(e);
+      isClosing = false;
+      notify();
+      return;
+    }
     _clockTimer?.cancel();
-    _refreshTimer?.cancel();
-    closedSession = await _sessionRepo.close(courseId);
+    _attendanceSub?.cancel();
+    _reportsSub?.cancel();
     WakelockPlus.disable();
     isClosing = false;
     notify();
@@ -142,7 +189,8 @@ class ActiveSessionViewModel extends BaseViewModel {
   @override
   void dispose() {
     _clockTimer?.cancel();
-    _refreshTimer?.cancel();
+    _attendanceSub?.cancel();
+    _reportsSub?.cancel();
     WakelockPlus.disable();
     super.dispose();
   }

@@ -1,11 +1,10 @@
-import 'package:flutter/material.dart';
-
 import '../models/app_user.dart';
 import '../services/auth_repository.dart';
+import 'base_viewmodel.dart';
 
 /// ViewModel de la pantalla principal (docente o estudiante):
 /// guarda qué pestaña de la barra inferior está abierta.
-class MainViewModel extends ChangeNotifier {
+class MainViewModel extends BaseViewModel {
   final AuthRepository _repo;
   MainViewModel(this._repo);
 
@@ -16,7 +15,7 @@ class MainViewModel extends ChangeNotifier {
   void selectTab(int index) {
     if (index == currentTab) return;
     currentTab = index;
-    notifyListeners();
+    notify();
   }
 
   Future<void> signOut() => _repo.signOut();
