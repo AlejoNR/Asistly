@@ -101,8 +101,8 @@ class CourseRepository {
     required String group,
     required String semester,
     required List<int> days,
-    required String startTime,
-    required String endTime,
+    required Map<int, String> startByDay,
+    required Map<int, String> endByDay,
     required String room,
     required String teacherName,
   }) async {
@@ -118,8 +118,12 @@ class CourseRepository {
       'grupo': group,
       'semestre': semester,
       'dias': days,
-      'horaInicio': startTime,
-      'horaFin': endTime,
+      // horaInicio/horaFin: las del primer día, para los cursos y versiones de la app sin "horarios".
+      'horaInicio': startByDay[days.first],
+      'horaFin': endByDay[days.first],
+      'horarios': {
+        for (final day in days) '$day': {'inicio': startByDay[day], 'fin': endByDay[day]},
+      },
       'aula': room,
       'codigoInscripcion': code,
       'docenteId': _uid,

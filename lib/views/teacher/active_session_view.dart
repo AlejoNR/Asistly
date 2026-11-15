@@ -338,7 +338,7 @@ class _LiveHeader extends StatelessWidget {
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
-                  'Clase #${session.number} · ${session.course.timeLabel}',
+                  'Clase #${session.number} · ${session.course.timeLabelOn(session.startedAt.weekday)}',
                   style: AppText.bodyMd.copyWith(color: AppColors.onPrimaryContainer),
                 ),
               ),

@@ -89,8 +89,8 @@ class CourseDetailViewModel extends BaseViewModel {
     if (c == null || c.hasActiveSession) return false;
     final now = DateTime.now();
     if (!c.days.contains(now.weekday)) return false;
-    final opens = _atTime(now, c.startTime).subtract(const Duration(minutes: 15));
-    final closes = _atTime(now, c.endTime);
+    final opens = _atTime(now, c.startOf(now.weekday)).subtract(const Duration(minutes: 15));
+    final closes = _atTime(now, c.endOf(now.weekday));
     return now.isAfter(opens) && now.isBefore(closes);
   }
 
@@ -103,10 +103,10 @@ class CourseDetailViewModel extends BaseViewModel {
     for (var i = 0; i < 8; i++) {
       final day = now.add(Duration(days: i));
       if (!c.days.contains(day.weekday)) continue;
-      if (i == 0 && now.isAfter(_atTime(day, c.endTime))) continue;
-      if (i == 0) return 'Próxima clase: hoy ${c.startTime}';
+      if (i == 0 && now.isAfter(_atTime(day, c.endOf(day.weekday)))) continue;
+      if (i == 0) return 'Próxima clase: hoy ${c.startOf(day.weekday)}';
       final dayName = DateFormatEs.short(day).split(' ').first; // "Lun"
-      return 'Próxima clase: $dayName ${c.startTime}';
+      return 'Próxima clase: $dayName ${c.startOf(day.weekday)}';
     }
     return '';
   }

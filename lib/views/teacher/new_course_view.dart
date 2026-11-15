@@ -3,13 +3,14 @@ import 'package:provider/provider.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
+import '../../util/date_format.dart';
 import '../../viewmodels/new_course_viewmodel.dart';
 import '../widgets/app_card.dart';
 import '../widgets/common.dart';
 import '../widgets/detail_app_bar.dart';
 import '../widgets/primary_button.dart';
 
-/// Nuevo curso (mockup 10): datos del curso y un horario único para los días elegidos.
+/// Nuevo curso (mockup 10): datos del curso y el horario, igual para todos los días o uno por día.
 class NewCourseView extends StatefulWidget {
   const NewCourseView({super.key});
 
@@ -38,19 +39,58 @@ class _NewCourseViewState extends State<NewCourseView> {
     return null;
   }
 
-  Future<void> _pickTime(bool isStart) async {
+  /// [day] null: la hora de todos los días.
+  Future<void> _pickTime(bool isStart, int? day) async {
     final vm = Provider.of<NewCourseViewModel>(context, listen: false);
+    final current = day == null ? (isStart ? vm.startTime : vm.endTime) : (isStart ? vm.startFor(day) : vm.endFor(day));
+    final title = isStart ? 'Hora de inicio' : 'Hora de fin';
     final picked = await showTimePicker(
       context: context,
-      initialTime: isStart ? vm.startTime : vm.endTime,
-      helpText: isStart ? 'Hora de inicio' : 'Hora de fin',
+      initialTime: current,
+      helpText: day == null ? title : '$title · ${DateFormatEs.shortDay(day)}',
     );
     if (picked == null) return;
     if (isStart) {
-      vm.setStartTime(picked);
+      vm.setStartTime(picked, day: day);
     } else {
-      vm.setEndTime(picked);
+      vm.setEndTime(picked, day: day);
     }
+  }
+
+  /// Hora de inicio y de fin, una al lado de la otra.
+  Widget _timeRow(NewCourseViewModel vm, int? day) {
+    return Row(
+      children: [
+        Expanded(
+          child: _TimeBox(
+            label: 'Hora de inicio',
+            value: NewCourseViewModel.formatTime(day == null ? vm.startTime : vm.startFor(day)),
+            onTap: () => _pickTime(true, day),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _TimeBox(
+            label: 'Hora de fin',
+            value: NewCourseViewModel.formatTime(day == null ? vm.endTime : vm.endFor(day)),
+            onTap: () => _pickTime(false, day),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Un bloque por día elegido (Lun, Mié...), en orden.
+  List<Widget> _perDayRows(NewCourseViewModel vm) {
+    final days = vm.selectedDays.toList()..sort();
+    final rows = <Widget>[];
+    for (final day in days) {
+      rows.add(const SizedBox(height: 12));
+      rows.add(Text(DateFormatEs.shortDay(day), style: AppText.labelLg.copyWith(color: AppColors.primary)));
+      rows.add(const SizedBox(height: 6));
+      rows.add(_timeRow(vm, day));
+    }
+    return rows;
   }
 
   Future<void> _submit() async {
@@ -129,31 +169,20 @@ class _NewCourseViewState extends State<NewCourseView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const _CardTitle(icon: Icons.schedule, title: 'Horario'),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Aplica para todos los días seleccionados',
-                      style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: vm.sameSchedule,
+                      onChanged: vm.setSameSchedule,
+                      title: Text(
+                        'Mismo horario todos los días',
+                        style: AppText.bodyMd.copyWith(color: AppColors.onSurface),
+                      ),
+                      subtitle: Text(
+                        vm.sameSchedule ? 'Aplica para todos los días seleccionados' : 'Elige la hora de cada día',
+                        style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _TimeBox(
-                            label: 'Hora de inicio',
-                            value: NewCourseViewModel.formatTime(vm.startTime),
-                            onTap: () => _pickTime(true),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _TimeBox(
-                            label: 'Hora de fin',
-                            value: NewCourseViewModel.formatTime(vm.endTime),
-                            onTap: () => _pickTime(false),
-                          ),
-                        ),
-                      ],
-                    ),
+                    if (vm.sameSchedule) ...[const SizedBox(height: 8), _timeRow(vm, null)] else ..._perDayRows(vm),
                     const SizedBox(height: 16),
                     _SmallLabel(icon: Icons.meeting_room_outlined, text: 'Aula'),
                     const SizedBox(height: 6),
@@ -289,14 +318,14 @@ class _SmallLabel extends StatelessWidget {
   }
 }
 
-/// Fila de botones Lun–Sáb: azul si el día está elegido, gris si no.
+/// Fila de botones Lun–Dom: azul si el día está elegido, gris si no.
 class _DayChips extends StatelessWidget {
   final Set<int> selected;
   final ValueChanged<int> onToggle;
 
   const _DayChips({required this.selected, required this.onToggle});
 
-  static const _labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  static const _labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
   @override
   Widget build(BuildContext context) {

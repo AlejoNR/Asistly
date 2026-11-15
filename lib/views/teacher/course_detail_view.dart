@@ -184,7 +184,7 @@ class _SummaryCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${dayNames[day - 1]} ${course.timeLabel}',
+                      '${dayNames[day - 1]} ${course.timeLabelOn(day)}',
                       style: AppText.titleMd.copyWith(color: AppColors.onSurface),
                     ),
                     Text(course.room, style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant)),

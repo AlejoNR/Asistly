@@ -137,7 +137,7 @@ class StudentHomeViewModel extends BaseViewModel {
     if (best == null || bestCourse == null) return '';
     final isToday = best.year == now.year && best.month == now.month && best.day == now.day;
     final day = isToday ? 'hoy' : DateFormatEs.shortDay(best.weekday);
-    return 'Próxima clase: $day ${bestCourse.course.startTime} · ${bestCourse.course.room}';
+    return 'Próxima clase: $day ${bestCourse.course.startOf(best.weekday)} · ${bestCourse.course.room}';
   }
 
   /// "(3 inscritas)": los pendientes todavía no cuentan.

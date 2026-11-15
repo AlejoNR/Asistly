@@ -156,7 +156,7 @@ class _ScheduleCard extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 4,
                   children: [
-                    Text(course.timeLabel, style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
+                    Text(course.timeLabelOn(day), style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
                     StatusChip(
                       label: course.room,
                       background: AppColors.surfaceContainerHigh,
