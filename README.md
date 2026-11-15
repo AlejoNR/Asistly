@@ -43,7 +43,6 @@ Hecha con **Flutter** y **Firebase** (Authentication, Firestore, Cloud Functions
 | `functions` | Cloud Functions para enviar los correos de verificación y recuperación |
 | `hosting` | Página web y política de privacidad |
 | `firestore_tests` | Pruebas de las reglas de Firestore en el emulador |
-| `stitch` | Mockups de las pantallas |
 | `test` | Pruebas unitarias de Flutter |
 
 ## Cómo correrlo

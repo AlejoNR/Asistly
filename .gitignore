@@ -46,3 +46,7 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Mockups y cache de Firebase: solo en la copia local
+/stitch/
+.firebase/
