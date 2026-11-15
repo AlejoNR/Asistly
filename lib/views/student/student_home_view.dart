@@ -313,7 +313,7 @@ class _LiveClassCard extends StatelessWidget {
                   children: [
                     _LiveInfo(icon: Icons.meeting_room_outlined, text: course.room),
                     _LiveInfo(icon: Icons.badge_outlined, text: course.teacherName),
-                    _LiveInfo(icon: Icons.schedule, text: course.timeLabel),
+                    _LiveInfo(icon: Icons.schedule, text: course.timeLabelOn(DateTime.now().weekday)),
                   ],
                 ),
                 const SizedBox(height: 18),

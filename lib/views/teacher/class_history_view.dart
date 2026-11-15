@@ -121,7 +121,7 @@ class _LiveCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Hoy · ${course.timeLabel} · ${course.room}',
+                  'Hoy · ${course.timeLabelOn(DateTime.now().weekday)} · ${course.room}',
                   style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
                 ),
               ],
@@ -172,7 +172,7 @@ class _HistoryCard extends StatelessWidget {
                     // El número ya está en el cuadro de la izquierda; aquí va la fecha.
                     Text(DateFormatEs.short(session.date), style: AppText.titleMd.copyWith(color: AppColors.onSurface)),
                     Text(
-                      '${course.timeLabel} · ${course.room}',
+                      '${course.timeLabelOn(session.date.weekday)} · ${course.room}',
                       style: AppText.bodySm.copyWith(color: AppColors.onSurfaceVariant),
                     ),
                   ],

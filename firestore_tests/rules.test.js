@@ -14,6 +14,9 @@ const bogota = new Date(now - 5 * 3600 * 1000);
 const todayKey = bogota.toISOString().substring(0, 10);
 const todayNumber = bogota.getUTCDay() === 0 ? 7 : bogota.getUTCDay();
 const otherDays = [1, 2, 3, 4, 5, 6, 7].filter((day) => day !== todayNumber);
+// Un horario de hoy que ya pasó o todavía no llega (lejos de la hora actual).
+const bogotaMinutes = bogota.getUTCHours() * 60 + bogota.getUTCMinutes();
+const notNow = bogotaMinutes > 120 ? { inicio: '00:00', fin: '00:30' } : { inicio: '23:00', fin: '23:59' };
 
 function newSession(courseId, extra) {
   return Object.assign({
@@ -103,6 +106,9 @@ function report(uid) {
     await db.doc('cursos/hoy').set(Object.assign({}, course, { dias: [todayNumber] }));
     await db.doc('cursos/otroDia').set(Object.assign({}, course, { dias: otherDays }));
     await db.doc('cursos/sinDias').set(Object.assign({}, course, { dias: [] }));
+    // Horario por día: hoy toca a otra hora, aunque horaInicio/horaFin cubran todo el día.
+    await db.doc('cursos/horaHoy').set(Object.assign({}, course, { dias: [todayNumber], horarios: { [todayNumber]: { inicio: '00:00', fin: '23:59' } } }));
+    await db.doc('cursos/otraHora').set(Object.assign({}, course, { dias: [todayNumber], horarios: { [todayNumber]: notNow } }));
     await db.doc('cursos/ajeno').set(Object.assign({}, course, { dias: [todayNumber], docenteId: 'teacher2' }));
   });
 
@@ -185,6 +191,8 @@ function report(uid) {
   await no('curso de otro docente', () => as('teacher1').doc(newId('ajeno')).set(newSession('ajeno')));
   await no('un estudiante no abre clases', () => as('stu1').doc(newId('hoy')).set(newSession('hoy', { docenteId: 'stu1' })));
   await ok('hoy es día de clase', () => as('teacher1').doc(newId('hoy')).set(newSession('hoy')));
+  await ok('horario por día: hoy está dentro de la hora', () => as('teacher1').doc(newId('horaHoy')).set(newSession('horaHoy')));
+  await no('horario por día: hoy la clase es a otra hora', () => as('teacher1').doc(newId('otraHora')).set(newSession('otraHora')));
   await no('solo una clase por día', () => as('teacher1').doc(newId('hoy')).set(newSession('hoy', { numeroClase: 2 })));
   await ok('el estudiante escucha las clases abiertas de sus cursos', () => as('stu1').collection('sesiones').where('cursoId', 'in', ['c1', 'hoy']).where('abierta', '==', true).get());
 

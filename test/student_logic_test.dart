@@ -49,6 +49,29 @@ void main() {
       final now = DateTime(2026, 11, 5, 8); // Jueves
       expect(course.nextClassAfter(now), DateTime(2026, 11, 9, 8)); // Lunes
     });
+
+    test('Con horario por día usa la hora de ese día', () {
+      const perDay = Course(
+        id: 'c2',
+        name: 'Redes',
+        group: 'Grupo 1',
+        semester: '2026-2',
+        days: [1, 3],
+        startTime: '08:00',
+        endTime: '10:00',
+        startByDay: {1: '08:00', 3: '14:00'},
+        endByDay: {1: '10:00', 3: '16:00'},
+        room: 'Lab 3',
+        enrollCode: 'RED-1AAA',
+        teacherName: 'Prof. Ramírez',
+      );
+      // Lunes 11:00: la del lunes terminó; la del miércoles es a las 14:00.
+      expect(perDay.nextClassAfter(DateTime(2026, 11, 2, 11)), DateTime(2026, 11, 4, 14));
+      // Miércoles 15:00: sigue en clase (14:00–16:00).
+      expect(perDay.nextClassAfter(DateTime(2026, 11, 4, 15)), DateTime(2026, 11, 4, 14));
+      expect(perDay.scheduleLabel, 'Lun 08:00 – 10:00, Mié 14:00 – 16:00 · Lab 3');
+      expect(course.scheduleLabel, 'Lun y Mié · 08:00 – 10:00 · Aula 101');
+    });
   });
 
   group('Porcentaje del estudiante', () {

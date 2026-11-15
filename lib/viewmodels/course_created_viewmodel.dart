@@ -19,7 +19,7 @@ class CourseCreatedViewModel extends BaseViewModel {
     const names = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
     final lines = <String>[];
     for (final day in course.days) {
-      lines.add('${names[day - 1]} ${course.timeLabel} · ${course.room}');
+      lines.add('${names[day - 1]} ${course.timeLabelOn(day)} · ${course.room}');
     }
     return lines;
   }

@@ -80,12 +80,14 @@ service cloud.firestore {
     // Un día de clase del curso, desde 15 minutos antes de la hora de inicio hasta
     // la hora de fin (especificación, sección 5). dayOfWeek(): 1 = lunes ... 7 = domingo,
     // igual que el campo "dias" del curso; las pruebas de firestore_tests lo comprueban.
+    // La hora es la de ese día en "horarios"; los cursos sin "horarios" usan horaInicio/horaFin.
     function inClassWindow(c) {
       let t = bogotaNow();
       let now = t.hours() * 60 + t.minutes();
+      let h = c.get('horarios', {}).get(string(t.dayOfWeek()), {'inicio': c.horaInicio, 'fin': c.horaFin});
       return t.dayOfWeek() in c.dias
-        && now >= minutesOf(c.horaInicio) - 15
-        && now <= minutesOf(c.horaFin);
+        && now >= minutesOf(h.inicio) - 15
+        && now <= minutesOf(h.fin);
     }
 
     // Perfil de quien hace la petición (nombre, código, rol y celular vinculado).

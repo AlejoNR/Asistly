@@ -16,6 +16,11 @@ class NewCourseViewModel extends BaseViewModel {
   TimeOfDay startTime = const TimeOfDay(hour: 8, minute: 0);
   TimeOfDay endTime = const TimeOfDay(hour: 10, minute: 0);
 
+  /// true: una sola hora para todos los días. false: cada día tiene la suya.
+  bool sameSchedule = true;
+  final Map<int, TimeOfDay> _startByDay = {};
+  final Map<int, TimeOfDay> _endByDay = {};
+
   bool isLoading = false;
   String? error;
 
@@ -29,17 +34,38 @@ class NewCourseViewModel extends BaseViewModel {
     notify();
   }
 
-  void setStartTime(TimeOfDay time) {
-    startTime = time;
+  void setSameSchedule(bool value) {
+    sameSchedule = value;
     error = null;
     notify();
   }
 
-  void setEndTime(TimeOfDay time) {
-    endTime = time;
+  /// Hora de ese día; si no se ha cambiado, la general.
+  TimeOfDay startFor(int day) => sameSchedule ? startTime : _startByDay[day] ?? startTime;
+  TimeOfDay endFor(int day) => sameSchedule ? endTime : _endByDay[day] ?? endTime;
+
+  /// [day] null cambia la hora general (la de todos los días).
+  void setStartTime(TimeOfDay time, {int? day}) {
+    if (day == null) {
+      startTime = time;
+    } else {
+      _startByDay[day] = time;
+    }
     error = null;
     notify();
   }
+
+  void setEndTime(TimeOfDay time, {int? day}) {
+    if (day == null) {
+      endTime = time;
+    } else {
+      _endByDay[day] = time;
+    }
+    error = null;
+    notify();
+  }
+
+  static const _dayNames = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 
   /// "08:00"
   static String formatTime(TimeOfDay time) {
@@ -60,21 +86,25 @@ class NewCourseViewModel extends BaseViewModel {
       notify();
       return null;
     }
-    // Se comparan los minutos desde medianoche para saber cuál hora es mayor.
-    final startMinutes = startTime.hour * 60 + startTime.minute;
-    final endMinutes = endTime.hour * 60 + endTime.minute;
-    if (endMinutes <= startMinutes) {
-      error = 'La hora de fin debe ser después de la hora de inicio.';
-      notify();
-      return null;
+    final days = selectedDays.toList();
+    days.sort(); // Lun, Mar, Mié... en orden.
+
+    for (final day in days) {
+      // Se comparan los minutos desde medianoche para saber cuál hora es mayor.
+      final start = startFor(day);
+      final end = endFor(day);
+      if (end.hour * 60 + end.minute <= start.hour * 60 + start.minute) {
+        error = sameSchedule
+            ? 'La hora de fin debe ser después de la hora de inicio.'
+            : 'El ${_dayNames[day - 1]}: la hora de fin debe ser después de la hora de inicio.';
+        notify();
+        return null;
+      }
     }
 
     isLoading = true;
     error = null;
     notify();
-
-    final days = selectedDays.toList();
-    days.sort(); // Lun, Mar, Mié... en orden.
 
     Course? course;
     try {
@@ -83,8 +113,8 @@ class NewCourseViewModel extends BaseViewModel {
         group: group.trim(),
         semester: semester.trim(),
         days: days,
-        startTime: formatTime(startTime),
-        endTime: formatTime(endTime),
+        startByDay: {for (final day in days) day: formatTime(startFor(day))},
+        endByDay: {for (final day in days) day: formatTime(endFor(day))},
         room: room.trim(),
         teacherName: _authRepo.user?.fullName ?? '',
       );

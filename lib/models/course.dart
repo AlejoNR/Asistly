@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Un curso (materia + grupo) con su horario único.
+/// Un curso (materia + grupo) con su horario semanal (puede cambiar según el día).
 ///
 /// En Firestore está en `cursos/{id}` (nombres de campos en español, como la
 /// especificación). Los contadores (inscritos, pendientes, promedio) no se
@@ -11,8 +11,10 @@ class Course {
   final String group; // Ej. "Grupo 2"
   final String semester; // Ej. "2026-2"
   final List<int> days; // Días de clase: 1 = lunes ... 7 = domingo
-  final String startTime; // "08:00"
+  final String startTime; // "08:00": horario de los días que no están en [startByDay]
   final String endTime; // "10:00"
+  final Map<int, String> startByDay; // Hora de inicio por día, ej. {1: "08:00", 3: "14:00"}
+  final Map<int, String> endByDay;
   final String room; // "Aula 101"
   final String enrollCode; // Código para unirse, ej. "PM2-4X7K"
   final String teacherName;
@@ -39,6 +41,8 @@ class Course {
     required this.days,
     required this.startTime,
     required this.endTime,
+    this.startByDay = const {},
+    this.endByDay = const {},
     required this.room,
     required this.enrollCode,
     required this.teacherName,
@@ -72,6 +76,8 @@ class Course {
       days: days,
       startTime: startTime,
       endTime: endTime,
+      startByDay: startByDay,
+      endByDay: endByDay,
       room: room,
       enrollCode: enrollCode,
       teacherName: teacherName,
@@ -93,6 +99,15 @@ class Course {
     for (final day in (data['dias'] as List<dynamic>? ?? [])) {
       days.add((day as num).toInt());
     }
+    // "horarios": {"1": {"inicio": "08:00", "fin": "10:00"}, ...}. Los cursos viejos no lo tienen.
+    final startByDay = <int, String>{};
+    final endByDay = <int, String>{};
+    final schedules = data['horarios'] as Map<String, dynamic>? ?? {};
+    schedules.forEach((day, value) {
+      final times = value as Map<String, dynamic>;
+      startByDay[int.parse(day)] = times['inicio'] as String;
+      endByDay[int.parse(day)] = times['fin'] as String;
+    });
     return Course(
       id: doc.id,
       name: data['nombre'] as String? ?? '',
@@ -101,6 +116,8 @@ class Course {
       days: days,
       startTime: data['horaInicio'] as String? ?? '00:00',
       endTime: data['horaFin'] as String? ?? '00:00',
+      startByDay: startByDay,
+      endByDay: endByDay,
       room: data['aula'] as String? ?? '',
       enrollCode: data['codigoInscripcion'] as String? ?? '',
       teacherName: data['docenteNombre'] as String? ?? '',
@@ -124,11 +141,22 @@ class Course {
     return '${names.join(', ')} y $last';
   }
 
-  /// "08:00 – 10:00"
-  String get timeLabel => '$startTime – $endTime';
+  /// Hora de inicio y de fin de la clase de ese día (1 = lunes ... 7 = domingo).
+  String startOf(int weekday) => startByDay[weekday] ?? startTime;
+  String endOf(int weekday) => endByDay[weekday] ?? endTime;
+
+  /// "08:00 – 10:00" para ese día.
+  String timeLabelOn(int weekday) => '${startOf(weekday)} – ${endOf(weekday)}';
 
   /// "Lun y Mié · 08:00 – 10:00 · Aula 101" (como lo pide la especificación).
-  String get scheduleLabel => '$daysLabel · $timeLabel · $room';
+  /// Si los días tienen horas distintas: "Lun 08:00 – 10:00, Mié 14:00 – 16:00 · Aula 101".
+  String get scheduleLabel {
+    if (days.isEmpty) return room;
+    final labels = days.map(timeLabelOn).toSet();
+    if (labels.length == 1) return '$daysLabel · ${labels.first} · $room';
+    final parts = days.map((day) => '${_dayNames[day - 1]} ${timeLabelOn(day)}');
+    return '${parts.join(', ')} · $room';
+  }
 
   /// "Programación Móvil – Grupo 2"
   String get fullName => '$name – $group';
@@ -139,8 +167,8 @@ class Course {
     for (var i = 0; i < 8; i++) {
       final day = now.add(Duration(days: i));
       if (!days.contains(day.weekday)) continue;
-      final start = _atTime(day, startTime);
-      if (now.isBefore(_atTime(day, endTime))) return start;
+      final start = _atTime(day, startOf(day.weekday));
+      if (now.isBefore(_atTime(day, endOf(day.weekday)))) return start;
     }
     return null;
   }
