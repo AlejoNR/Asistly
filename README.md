@@ -22,6 +22,7 @@ Hecha con **Flutter** y **Firebase** (Authentication, Firestore, Cloud Functions
 - Registro e inicio de sesión solo con correo institucional (`@udla.edu.co`).
 - Verificación de correo y recuperación de contraseña con correos propios enviados desde Cloud Functions.
 - Cada cuenta de estudiante queda vinculada a un solo celular para evitar que alguien marque por otro.
+  > **Nota (pruebas):** por ahora está **desactivado el bloqueo al iniciar sesión**: se puede entrar con la misma cuenta desde cualquier celular para probar la app. Lo que sigue exigiendo el celular vinculado es **marcar asistencia** (en la app y en las reglas de Firestore); desde otro celular el botón de escanear aparece desactivado.
 
 ## ¿Cómo funciona la asistencia?
 
