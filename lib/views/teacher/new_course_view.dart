@@ -289,14 +289,14 @@ class _SmallLabel extends StatelessWidget {
   }
 }
 
-/// Fila de botones Lun–Sáb: azul si el día está elegido, gris si no.
+/// Fila de botones Lun–Dom: azul si el día está elegido, gris si no.
 class _DayChips extends StatelessWidget {
   final Set<int> selected;
   final ValueChanged<int> onToggle;
 
   const _DayChips({required this.selected, required this.onToggle});
 
-  static const _labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  static const _labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
   @override
   Widget build(BuildContext context) {
