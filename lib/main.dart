@@ -127,6 +127,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Asistly',
       debugShowCheckedModeBanner: false,
+      // Quita el efecto de Android 12+ que "estira" la pantalla al llegar al borde del scroll.
+      scrollBehavior: const MaterialScrollBehavior().copyWith(overscroll: false),
       theme: AppTheme.light,
       initialRoute: initialRoute,
       // Mientras se construyen las pantallas, las rutas que aún no existen
