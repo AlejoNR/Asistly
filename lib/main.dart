@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
 import 'services/auth_repository.dart';
+import 'services/ble_advertiser.dart';
 import 'services/bluetooth_service.dart';
 import 'services/course_repository.dart';
 import 'services/fake_course_repository.dart';
@@ -109,6 +110,10 @@ class AppState extends StatelessWidget {
         ),
         Provider<BluetoothService>(
           create: (_) => demo ? FakeBluetoothService() : BluetoothService(),
+        ),
+        // Señal Bluetooth que emite el docente durante la clase.
+        Provider<BleAdvertiser>(
+          create: (_) => demo ? FakeBleAdvertiser() : BleAdvertiser(),
         ),
       ],
       child: MyApp(initialRoute: initialRoute),
@@ -248,6 +253,7 @@ class MyApp extends StatelessWidget {
             create: (context) => ActiveSessionViewModel(
               _sessions(context),
               _courses(context),
+              Provider.of<BleAdvertiser>(context, listen: false),
               courseId,
             ),
             child: const ActiveSessionView(),
@@ -300,14 +306,17 @@ class MyApp extends StatelessWidget {
             ),
           );
         },
-        'signal_search': (context) => ChangeNotifierProvider(
-          create: (context) => SignalSearchViewModel(Provider.of<BluetoothService>(context, listen: false)),
-          child: const SignalSearchView(),
-        ),
-        'scan_qr': (context) {
+        'signal_search': (context) {
           final open = ModalRoute.of(context)!.settings.arguments as OpenClass;
           return ChangeNotifierProvider(
-            create: (context) => ScanQrViewModel(_repo(context), _courses(context), _sessions(context), open),
+            create: (context) => SignalSearchViewModel(Provider.of<BluetoothService>(context, listen: false), open),
+            child: const SignalSearchView(),
+          );
+        },
+        'scan_qr': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as ScanQrArgs;
+          return ChangeNotifierProvider(
+            create: (context) => ScanQrViewModel(_repo(context), _courses(context), _sessions(context), args),
             child: const ScanQrView(),
           );
         },

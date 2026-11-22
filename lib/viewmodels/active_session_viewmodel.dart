@@ -5,6 +5,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../models/active_session.dart';
 import '../models/class_session.dart';
 import '../models/course_student.dart';
+import '../services/ble_advertiser.dart';
 import '../services/course_repository.dart';
 import '../services/session_repository.dart';
 import '../util/session_codes.dart';
@@ -15,9 +16,10 @@ import 'base_viewmodel.dart';
 class ActiveSessionViewModel extends BaseViewModel {
   final SessionRepository _sessionRepo;
   final CourseRepository _courseRepo;
+  final BleAdvertiser _advertiser;
   final String courseId;
 
-  ActiveSessionViewModel(this._sessionRepo, this._courseRepo, this.courseId) {
+  ActiveSessionViewModel(this._sessionRepo, this._courseRepo, this._advertiser, this.courseId) {
     _start();
   }
 
@@ -28,6 +30,10 @@ class ActiveSessionViewModel extends BaseViewModel {
   DateTime now = DateTime.now();
 
   bool isClosing = false;
+
+  /// Si la clase valida por Bluetooth y no se pudo emitir la señal, aquí va el motivo.
+  /// null = emitiendo (o la clase no usa Bluetooth).
+  String? signalError;
 
   /// Error al abrir la clase (por ejemplo, si ya se dictó hoy) o al cerrarla.
   String? error;
@@ -106,6 +112,7 @@ class ActiveSessionViewModel extends BaseViewModel {
       _sessionRepo.publishTokens(current, now).catchError((e) {
         _publishedWindow = -1; // Se reintenta en el siguiente segundo
       });
+      if (current.course.validateBluetooth) _advertise(current, window);
     }
 
     // Cierre automático al acabar el tiempo de registro. Si falló (error != null),
@@ -114,6 +121,16 @@ class ActiveSessionViewModel extends BaseViewModel {
       closeSession();
     }
     notify();
+  }
+
+  /// Cambia el anuncio Bluetooth al código de la ventana nueva.
+  Future<void> _advertise(ActiveSession current, int window) async {
+    final code = SessionCodes.code(current.secret, 'ble', window);
+    final problem = await _advertiser.advertise(current.id, code);
+    if (problem != signalError) {
+      signalError = problem;
+      notify();
+    }
   }
 
   // ---------- Datos para la vista ----------
@@ -181,6 +198,7 @@ class ActiveSessionViewModel extends BaseViewModel {
     _clockTimer?.cancel();
     _attendanceSub?.cancel();
     _reportsSub?.cancel();
+    _advertiser.stop();
     WakelockPlus.disable();
     isClosing = false;
     notify();
@@ -191,6 +209,7 @@ class ActiveSessionViewModel extends BaseViewModel {
     _clockTimer?.cancel();
     _attendanceSub?.cancel();
     _reportsSub?.cancel();
+    _advertiser.stop();
     WakelockPlus.disable();
     super.dispose();
   }

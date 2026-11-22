@@ -52,7 +52,7 @@ class Course {
     this.officialListCount = 0,
     this.officialListImportedAt,
     this.registrationMinutes = 10,
-    this.validateBluetooth = true,
+    this.validateBluetooth = false,
     this.hasActiveSession = false,
   });
 
@@ -124,7 +124,7 @@ class Course {
       officialListCount: (data['listaCantidad'] as num?)?.toInt() ?? 0,
       officialListImportedAt: (data['listaImportadaEn'] as Timestamp?)?.toDate(),
       registrationMinutes: (data['tiempoRegistro'] as num?)?.toInt() ?? 10,
-      validateBluetooth: data['validarBluetooth'] as bool? ?? true,
+      validateBluetooth: data['validarBluetooth'] as bool? ?? false,
     );
   }
 

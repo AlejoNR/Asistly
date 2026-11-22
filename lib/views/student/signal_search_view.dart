@@ -136,7 +136,13 @@ class _Searching extends StatelessWidget {
           label: 'Escanear código QR',
           leadingIcon: Icons.qr_code_scanner,
           radius: 16,
-          onPressed: detected ? () => Navigator.pushNamed(context, 'scan_qr', arguments: open) : null,
+          onPressed: detected
+              ? () => Navigator.pushNamed(
+                    context,
+                    'scan_qr',
+                    arguments: ScanQrArgs(openClass: open, signal: vm.signal),
+                  )
+              : null,
         ),
         const SizedBox(height: 8),
         if (!detected)

@@ -11,7 +11,7 @@ import '../widgets/primary_button.dart';
 import '../widgets/status_chip.dart';
 
 /// "¡Asistencia registrada!" (mockup 29). Sin "Ver comprobante": la especificación no
-/// incluye exportar archivos. Solo aparece el método que de verdad se validó (el QR).
+/// incluye exportar archivos. Dice con qué se validó: solo QR, o Bluetooth y QR.
 class AttendanceDoneView extends StatelessWidget {
   const AttendanceDoneView({super.key});
 
@@ -154,8 +154,10 @@ class AttendanceDoneView extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const StatusChip(
-                      label: 'Validado con código QR',
+                    StatusChip(
+                      label: vm.openClass.validateBluetooth
+                          ? 'Validado con Bluetooth y código QR'
+                          : 'Validado con código QR',
                       background: AppColors.surfaceContainer,
                       foreground: AppColors.primaryContainer,
                     ),

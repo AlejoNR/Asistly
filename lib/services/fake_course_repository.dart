@@ -35,6 +35,7 @@ class FakeCourseRepository implements CourseRepository {
       pendingCount: 2,
       averageAttendance: 87,
       hasActiveSession: true,
+      validateBluetooth: true, // Para ver en el demo los pasos de la señal Bluetooth
     ),
     const Course(
       id: 'as1',

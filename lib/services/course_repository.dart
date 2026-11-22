@@ -129,7 +129,7 @@ class CourseRepository {
       'docenteId': _uid,
       'docenteNombre': teacherName,
       'tiempoRegistro': 10,
-      'validarBluetooth': true,
+      'validarBluetooth': false, // Apagado hasta calibrar el Bluetooth con celulares reales
       'listaCantidad': 0,
       'listaImportadaEn': null,
       'creadoEn': FieldValue.serverTimestamp(),

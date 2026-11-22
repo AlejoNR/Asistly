@@ -30,7 +30,9 @@ Hecha con **Flutter** y **Firebase** (Authentication, Firestore, Cloud Functions
 2. El QR contiene el id de la sesión y el código vigente.
 3. Las reglas de Firestore (`firestore.rules`) comparan el código en el servidor (la app nunca lo puede leer) y solo aceptan el registro si está vigente, si llega dentro del tiempo de registro de la sesión y si viene del celular vinculado al estudiante.
 
-> La búsqueda de la señal Bluetooth del docente todavía está **simulada** (`lib/services/bluetooth_service.dart`). Por ahora la validación real es el QR.
+4. Si el curso tiene activado **"Validar por Bluetooth"**, el celular del docente además emite una señal Bluetooth con otro código que también cambia cada 15 segundos (`lib/services/ble_advertiser.dart`). El estudiante tiene que captarla cerca del docente antes de leer el QR (`lib/services/bluetooth_service.dart`), y las reglas exigen los dos códigos. Así una foto del QR no sirve desde fuera del salón.
+
+> El Bluetooth todavía **no se ha probado con celulares reales** ni se ha calibrado la distancia en el aula (`AppConfig.bleMinRssi`). Por eso "Validar por Bluetooth" viene **apagado** en los cursos nuevos: así la asistencia funciona solo con el QR hasta probarlo.
 
 ## Estructura del proyecto
 

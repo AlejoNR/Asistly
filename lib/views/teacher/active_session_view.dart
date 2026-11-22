@@ -358,6 +358,8 @@ class _QrCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Rojo si la clase pide Bluetooth y el celular no está emitiendo la señal.
+    final signalFailed = bluetooth && vm.signalError != null;
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -381,13 +383,23 @@ class _QrCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(bluetooth ? Icons.sensors : Icons.qr_code_2, size: 18, color: AppColors.primaryContainer),
+                      Icon(
+                        !bluetooth
+                            ? Icons.qr_code_2
+                            : (vm.signalError == null ? Icons.sensors : Icons.sensors_off),
+                        size: 18,
+                        color: signalFailed ? AppColors.error : AppColors.primaryContainer,
+                      ),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
-                          bluetooth ? 'Señal Bluetooth activa' : 'Solo QR (Bluetooth desactivado)',
+                          !bluetooth
+                              ? 'Solo QR (Bluetooth desactivado)'
+                              : (vm.signalError ?? 'Señal Bluetooth activa'),
                           textAlign: TextAlign.center,
-                          style: AppText.labelLg.copyWith(color: AppColors.primaryContainer),
+                          style: AppText.labelLg.copyWith(
+                            color: signalFailed ? AppColors.error : AppColors.primaryContainer,
+                          ),
                         ),
                       ),
                     ],

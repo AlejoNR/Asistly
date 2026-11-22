@@ -87,4 +87,23 @@ void main() {
       expect(item.isAtRisk, true);
     });
   });
+
+  group('Señal Bluetooth', () {
+    test('el estudiante lee el código que emite el docente', () {
+      final code = SessionCodes.code('secreto', 'ble', 123);
+      final bytes = SessionCodes.blePayload('c1_2026-11-22', code);
+      expect(bytes.length, 8); // Cabe de sobra en un anuncio BLE (31 bytes)
+      expect(SessionCodes.parseBlePayload('c1_2026-11-22', bytes), code);
+    });
+
+    test('ignora la señal de otra clase', () {
+      final bytes = SessionCodes.blePayload('c1_2026-11-22', 'A1B2C3D4');
+      expect(SessionCodes.parseBlePayload('c2_2026-11-22', bytes), null);
+    });
+
+    test('ignora otros aparatos', () {
+      expect(SessionCodes.parseBlePayload('c1_2026-11-22', [1, 2, 3, 4, 5, 6, 7, 8]), null);
+      expect(SessionCodes.parseBlePayload('c1_2026-11-22', [0x41, 0x53]), null);
+    });
+  });
 }

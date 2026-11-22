@@ -312,7 +312,7 @@ class FakeSessionRepository implements SessionRepository {
 
   /// En el demo no hay reglas: basta con que parezca un QR de Asistly y sea de esta clase.
   @override
-  Future<void> markWithQr(OpenClass openClass, String qrText, AppUser user) async {
+  Future<void> markWithQr(OpenClass openClass, String qrText, AppUser user, {SignalCapture? signal}) async {
     await _fakeDelay();
     final qr = SessionCodes.parseQr(qrText);
     if (qr == null || qr[0] != openClass.sessionId) {

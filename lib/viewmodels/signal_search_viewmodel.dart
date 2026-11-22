@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../models/active_session.dart';
 import '../services/bluetooth_service.dart';
 import 'base_viewmodel.dart';
 
@@ -7,25 +8,29 @@ import 'base_viewmodel.dart';
 enum SignalState { checking, bluetoothOff, searching, detected, failed }
 
 /// ViewModel de "Buscando la señal" (mockup 26) y "Activa el Bluetooth" (mockup 27).
-/// La búsqueda está simulada: ver [BluetoothService.searchClassSignal].
 class SignalSearchViewModel extends BaseViewModel {
   final BluetoothService _bluetooth;
+  final OpenClass openClass;
 
-  SignalSearchViewModel(this._bluetooth) {
+  SignalSearchViewModel(this._bluetooth, this.openClass) {
     _start();
   }
 
   SignalState state = SignalState.checking;
   String? error;
 
+  /// La señal captada; se le pasa a "Escanear QR" para guardarla con la asistencia.
+  SignalCapture? signal;
+
   StreamSubscription<bool>? _bluetoothSub;
   bool _failureTaken = false;
 
   Future<void> _start() async {
     try {
-      // Un celular sin Bluetooth no puede pasar este paso: sigue solo con el QR.
+      // Un celular sin Bluetooth no puede captar la señal: puede "Informar al docente"
+      // desde la pantalla de error, y el docente decide si lo marca a mano.
       if (!await _bluetooth.isSupported()) {
-        state = SignalState.detected;
+        state = SignalState.failed;
         notify();
         return;
       }
@@ -50,8 +55,12 @@ class SignalSearchViewModel extends BaseViewModel {
     state = SignalState.searching;
     error = null;
     notify();
-    final found = await _bluetooth.searchClassSignal();
-    state = found ? SignalState.detected : SignalState.failed;
+    try {
+      signal = await _bluetooth.searchClassSignal(openClass.sessionId);
+    } catch (e) {
+      signal = null; // Por ejemplo, sin permiso de Bluetooth: cuenta como no detectada
+    }
+    state = signal != null ? SignalState.detected : SignalState.failed;
     notify();
   }
 

@@ -240,8 +240,11 @@ class _LiveClassCard extends StatelessWidget {
 
   void _start(BuildContext context) {
     // Sin "Validar por Bluetooth" se va directo al QR (especificación, sección 4).
-    final route = open.validateBluetooth ? 'signal_search' : 'scan_qr';
-    Navigator.pushNamed(context, route, arguments: open).then((value) => vm.load());
+    if (open.validateBluetooth) {
+      Navigator.pushNamed(context, 'signal_search', arguments: open).then((value) => vm.load());
+    } else {
+      Navigator.pushNamed(context, 'scan_qr', arguments: ScanQrArgs(openClass: open)).then((value) => vm.load());
+    }
   }
 
   @override

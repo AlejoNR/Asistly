@@ -124,7 +124,12 @@ class SessionRepository {
 
     return ActiveSession(
       id: opened.id,
-      course: course.copyWith(hasActiveSession: true),
+      // validateBluetooth sale de la sesión, no del curso: si el docente cambió el
+      // interruptor con la clase ya abierta, manda lo que se guardó al abrirla.
+      course: course.copyWith(
+        hasActiveSession: true,
+        validateBluetooth: data['validarBluetooth'] as bool? ?? false,
+      ),
       number: (data['numeroClase'] as num?)?.toInt() ?? 1,
       startedAt: (data['inicio'] as Timestamp?)?.toDate() ?? DateTime.now(),
       registrationMinutes: (data['tiempoRegistro'] as num?)?.toInt() ?? course.registrationMinutes,
@@ -176,6 +181,11 @@ class SessionRepository {
       'qrAnterior': SessionCodes.code(session.secret, 'qr', window - 1),
       'bleActual': SessionCodes.code(session.secret, 'ble', window),
       'bleAnterior': SessionCodes.code(session.secret, 'ble', window - 1),
+      // El estudiante capta la señal y después lee el QR, lo que puede tomarle
+      // un rato: se aceptan los códigos Bluetooth del último minuto (4 ventanas).
+      'bleRecientes': [
+        for (var i = 0; i < 4; i++) SessionCodes.code(session.secret, 'ble', window - i),
+      ],
       'actualizadoEn': FieldValue.serverTimestamp(),
     });
   }
@@ -331,7 +341,7 @@ class SessionRepository {
                 course: course,
                 startedAt: startedAt,
                 registrationMinutes: (data['tiempoRegistro'] as num?)?.toInt() ?? course.registrationMinutes,
-                validateBluetooth: data['validarBluetooth'] as bool? ?? true,
+                validateBluetooth: data['validarBluetooth'] as bool? ?? false,
                 alreadyMarked: own.exists,
               ),
             );
@@ -342,7 +352,10 @@ class SessionRepository {
 
   /// Registra la asistencia con el texto del QR leído. Quien valida de verdad son las
   /// reglas de Firestore: comparan el código con los vigentes, que la app no puede leer.
-  Future<void> markWithQr(OpenClass openClass, String qrText, AppUser user) async {
+  ///
+  /// Si la clase valida por Bluetooth, [signal] es la señal del docente que se captó
+  /// antes de leer el QR; las reglas comprueban que su código sea reciente.
+  Future<void> markWithQr(OpenClass openClass, String qrText, AppUser user, {SignalCapture? signal}) async {
     final qr = SessionCodes.parseQr(qrText);
     if (qr == null) throw SessionException('Ese código no es un QR de asistencia de Asistly.');
     if (qr[0] != openClass.sessionId) {
@@ -356,8 +369,12 @@ class SessionRepository {
       throw SessionException('Solo puedes marcar asistencia desde el celular vinculado a tu cuenta.');
     }
 
+    if (openClass.validateBluetooth && signal == null) {
+      throw SessionException('Primero debes captar la señal Bluetooth de la clase.');
+    }
+
     final ref = _sessions.doc(openClass.sessionId).collection('asistencias').doc(_uid);
-    final data = {
+    final data = <String, dynamic>{
       'estado': 'presente',
       'hora': FieldValue.serverTimestamp(),
       'metodo': 'qr',
@@ -366,6 +383,11 @@ class SessionRepository {
       'nombre': user.fullName,
       'codigo': user.code,
     };
+    if (openClass.validateBluetooth && signal != null) {
+      data['metodo'] = 'ble_qr';
+      data['ble'] = signal.code;
+      data['rssi'] = signal.rssi;
+    }
 
     try {
       await _write(ref, data);
@@ -403,6 +425,9 @@ class SessionRepository {
       if (DateTime.now().isAfter(openClass.endsAt)) return 'Se acabó el tiempo para registrarse.';
     } catch (e) {
       // Si esto también falla, se muestra el motivo general.
+    }
+    if (openClass.validateBluetooth) {
+      return 'El código QR o la señal Bluetooth vencieron. Vuelve a buscar la señal y lee el QR otra vez.';
     }
     return 'El código QR venció o no es válido. Intenta de nuevo con el que está en pantalla.';
   }

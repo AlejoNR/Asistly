@@ -49,6 +49,23 @@ class OpenClass {
   DateTime get endsAt => startedAt.add(Duration(minutes: registrationMinutes));
 }
 
+/// La señal Bluetooth del docente que captó el celular del estudiante.
+class SignalCapture {
+  final String code; // Código Bluetooth de 8 caracteres
+  final int rssi; // Intensidad de la señal en dBm (más cerca de 0 = más cerca del docente)
+
+  const SignalCapture({required this.code, required this.rssi});
+}
+
+/// Lo que recibe la pantalla "Escanear QR": la clase y, si se validó por
+/// Bluetooth, la señal captada en el paso anterior.
+class ScanQrArgs {
+  final OpenClass openClass;
+  final SignalCapture? signal;
+
+  const ScanQrArgs({required this.openClass, this.signal});
+}
+
 /// Una asistencia registrada en la sesión.
 ///
 /// En Firestore irá en `sesiones/{id}/asistencias/{uid}`.

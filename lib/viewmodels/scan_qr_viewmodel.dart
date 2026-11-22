@@ -14,8 +14,11 @@ class ScanQrViewModel extends BaseViewModel {
   final CourseRepository _courseRepo;
   final SessionRepository _sessionRepo;
   final OpenClass openClass;
+  final SignalCapture? signal; // La señal Bluetooth captada en el paso anterior, si la hubo
 
-  ScanQrViewModel(this._authRepo, this._courseRepo, this._sessionRepo, this.openClass);
+  ScanQrViewModel(this._authRepo, this._courseRepo, this._sessionRepo, ScanQrArgs args)
+      : openClass = args.openClass,
+        signal = args.signal;
 
   bool isSubmitting = false;
   String? hint; // Aviso sobre la cámara: "Ese código no es de Asistly"
@@ -46,7 +49,7 @@ class ScanQrViewModel extends BaseViewModel {
     hint = null;
     notify();
     try {
-      await _sessionRepo.markWithQr(openClass, text, user);
+      await _sessionRepo.markWithQr(openClass, text, user, signal: signal);
       return ScanResult.success;
     } catch (e) {
       failure = errorMessage(e);

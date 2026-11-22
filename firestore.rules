@@ -143,14 +143,28 @@ service cloud.firestore {
       return canActInSession(sessionId, uid)
         && request.time <= s.inicio + duration.value(s.tiempoRegistro, 'm')
         && request.time <= t.actualizadoEn + duration.value(1, 'm')
-        && d.keys().hasOnly(['estado', 'hora', 'metodo', 'qr', 'deviceId', 'nombre', 'codigo'])
+        && d.keys().hasOnly(['estado', 'hora', 'metodo', 'qr', 'ble', 'rssi', 'deviceId', 'nombre', 'codigo'])
         && d.estado == 'presente'
-        && d.metodo == 'qr'
         && d.hora == request.time
         && d.deviceId == profile().deviceId
         && d.nombre == profile().fullName
         && d.codigo == profile().code
-        && (d.qr == t.qrActual || d.qr == t.qrAnterior);
+        && (d.qr == t.qrActual || d.qr == t.qrAnterior)
+        && validSignal(s, t, d);
+    }
+
+    // Si la clase se abrió con "Validar por Bluetooth", además del QR hay que traer
+    // el código de la señal que emite el docente (uno del último minuto).
+    // Si no, basta el QR. Las sesiones viejas sin el campo cuentan como solo QR.
+    function validSignal(s, t, d) {
+      return s.get('validarBluetooth', false) == true
+        ? d.metodo == 'ble_qr'
+          && d.ble is string
+          && d.rssi is int
+          && d.ble in t.get('bleRecientes', [])
+        : d.metodo == 'qr'
+          && !('ble' in d)
+          && !('rssi' in d);
     }
 
     // "Mis cursos" del estudiante: busca sus inscripciones en todos los cursos a la vez

@@ -99,6 +99,11 @@ function report(uid) {
     await db.doc('sesiones/cerrada/privado/tokens').set({ qrActual: 'AAAA', qrAnterior: 'BBBB', actualizadoEn: TS.now() });
     await db.doc('sesiones/vencida').set(Object.assign({}, session, { inicio: TS.fromMillis(now - 11 * 60000) }));
     await db.doc('sesiones/vencida/privado/tokens').set({ qrActual: 'AAAA', qrAnterior: 'BBBB', actualizadoEn: TS.now() });
+    // Clase con "Validar por Bluetooth": además del QR pide un código de la señal.
+    await db.doc('sesiones/conBle').set(Object.assign({}, session, { validarBluetooth: true }));
+    await db.doc('sesiones/conBle/privado/tokens').set({ qrActual: 'AAAA', qrAnterior: 'BBBB', bleRecientes: ['B1', 'B2', 'B3', 'B4'], actualizadoEn: TS.now() });
+    await db.doc('sesiones/soloQr').set(Object.assign({}, session, { validarBluetooth: false }));
+    await db.doc('sesiones/soloQr/privado/tokens').set({ qrActual: 'AAAA', qrAnterior: 'BBBB', bleRecientes: ['B1'], actualizadoEn: TS.now() });
     await db.doc('sesiones/sinDocente').set(session);
     await db.doc('sesiones/sinDocente/privado/tokens').set({ qrActual: 'AAAA', qrAnterior: 'BBBB', actualizadoEn: TS.fromMillis(now - 5 * 60000) });
 
@@ -174,6 +179,17 @@ function report(uid) {
   await no('no puede leer el secreto', () => as('stu1').doc(`sesiones/${SID}/privado/secreto`).get());
   await no('no puede escribir los códigos', () => as('stu1').doc(`sesiones/${SID}/privado/tokens`).set({ qrActual: 'ZZZZ' }));
   await no('no puede cerrar la clase', () => as('stu1').doc(`sesiones/${SID}`).update({ abierta: false }));
+
+  console.log('\nMarcar asistencia con Bluetooth');
+  const ble = (extra) => Object.assign({ metodo: 'ble_qr', ble: 'B1', rssi: -60 }, extra);
+  await no('clase con Bluetooth: solo QR no basta', () => as('stu1').doc(asis('conBle', 'stu1')).set(attendance('stu1')));
+  await no('clase con Bluetooth: código de señal falso', () => as('stu1').doc(asis('conBle', 'stu1')).set(attendance('stu1', ble({ ble: 'ZZ' }))));
+  await no('clase con Bluetooth: sin intensidad de señal', () => as('stu1').doc(asis('conBle', 'stu1')).set(attendance('stu1', { metodo: 'ble_qr', ble: 'B1' })));
+  await no('clase con Bluetooth: señal buena pero QR falso', () => as('stu1').doc(asis('conBle', 'stu1')).set(attendance('stu1', ble({ qr: 'ZZZZ' }))));
+  await no('clase sin Bluetooth: no acepta datos de señal', () => as('stu1').doc(asis('soloQr', 'stu1')).set(attendance('stu1', ble())));
+  await ok('clase con Bluetooth: señal actual y QR', () => as('stu1').doc(asis('conBle', 'stu1')).set(attendance('stu1', ble())));
+  await ok('clase con Bluetooth: señal de hace casi un minuto', () => as('stu2').doc(asis('conBle', 'stu2')).set(attendance('stu2', ble({ ble: 'B4' }))));
+  await ok('clase sin Bluetooth: basta el QR', () => as('stu1').doc(asis('soloQr', 'stu1')).set(attendance('stu1')));
 
   console.log('\nInformar al docente');
   const rep = (sid, uid) => `sesiones/${sid}/reportesFalla/${uid}`;
