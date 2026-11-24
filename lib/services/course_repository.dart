@@ -31,7 +31,6 @@ class CourseException implements Exception {
 /// - `cursos/{cursoId}/inscripciones/{uid}`: estado del estudiante (inscrito, pendiente, retirado).
 /// - `sesiones/{sesionId}`: cada clase (ver [SessionRepository]).
 ///
-/// El modo demo usa [FakeCourseRepository], que tiene estos mismos métodos.
 class CourseRepository {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final OfficialListReader _listReader = OfficialListReader();
@@ -318,9 +317,6 @@ class CourseRepository {
   Future<void> addClosedSession(ClassSession session) async {}
 
   // ---------- Estudiante ----------
-
-  /// false en el real; true en el demo, donde no hay cámara ni QR de verdad.
-  bool get isDemo => false;
 
   /// Inscripciones del estudiante en todos los cursos. `collectionGroup` busca en
   /// todas las subcolecciones "inscripciones" a la vez, en vez de curso por curso.

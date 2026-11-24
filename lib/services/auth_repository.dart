@@ -32,8 +32,6 @@ class AuthRepository {
   /// Perfil de quien inició sesión (null si no hay sesión).
   AppUser? user;
 
-  bool _isDemo = false;
-
   String get currentEmail => _authService.currentUser?.email ?? '';
 
   /// Cada rol tiene su propio Home: 'teacher_home' o 'student_home'.
@@ -161,40 +159,16 @@ class AuthRepository {
     }
   }
 
-  /// SOLO PARA EL MODO DEMO (lib/main_demo.dart): entra con un usuario de
-  /// ejemplo sin pasar por Firebase, para revisar las pantallas sin iniciar sesión.
-  void startDemo(UserRole role) {
-    _isDemo = true;
-    if (role == UserRole.teacher) {
-      user = const AppUser(
-        uid: 'demo-docente',
-        fullName: 'Carlos Ramírez',
-        code: 'DOC-0142',
-        email: 'carlos.ramirez@udla.edu.co',
-        role: UserRole.teacher,
-      );
-    } else {
-      user = const AppUser(
-        uid: 'demo-estudiante',
-        fullName: 'Aldo Encarnación',
-        code: '2024-1156',
-        email: 'ald.encarnacion@udla.edu.co',
-        role: UserRole.student,
-        deviceId: 'demo',
-      );
-    }
-  }
-
   Future<void> signOut() async {
     user = null;
     await _authService.signOut();
   }
 
   /// true si este es el celular vinculado a la cuenta: el único desde el que
-  /// el estudiante puede marcar asistencia. En el demo no hay celular vinculado.
+  /// el estudiante puede marcar asistencia.
   Future<bool> isLinkedDevice() async {
     final profile = user;
-    if (_isDemo || profile == null) return true;
+    if (profile == null) return true;
     final thisDevice = await _deviceService.getDeviceId();
     return profile.deviceId == thisDevice;
   }

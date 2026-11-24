@@ -60,12 +60,6 @@ flutter pub get
 flutter run
 ```
 
-**Modo demo** (solo desarrollo): entra como docente o estudiante sin iniciar sesión.
-
-```bash
-flutter run -t lib/main_demo.dart
-```
-
 **Pruebas:**
 
 ```bash

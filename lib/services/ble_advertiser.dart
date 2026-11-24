@@ -61,12 +61,3 @@ class BleAdvertiser {
     }
   }
 }
-
-/// Para el modo demo: hace como si emitiera.
-class FakeBleAdvertiser extends BleAdvertiser {
-  @override
-  Future<String?> advertise(String sessionId, String bleCode) async => null;
-
-  @override
-  Future<void> stop() async {}
-}

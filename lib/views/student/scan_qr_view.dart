@@ -138,21 +138,6 @@ class _ScanQrViewState extends State<ScanQrView> {
                     color: vm.hint == null ? AppColors.onPrimary : AppColors.tertiaryFixed,
                   ),
                 ),
-                // Solo en el modo demo: no hay docente que muestre un QR de verdad.
-                if (vm.isDemo) ...[
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: vm.isSubmitting ? null : () => _submit(vm.demoQrText, vm),
-                    child: const Text(
-                      'Simular lectura del QR (demo)',
-                      style: TextStyle(color: AppColors.tertiaryFixed),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: vm.isSubmitting ? null : () => _submit(vm.demoWrongQrText, vm),
-                    child: const Text('Simular QR no válido (demo)', style: TextStyle(color: AppColors.tertiaryFixed)),
-                  ),
-                ],
               ],
             ),
           ),

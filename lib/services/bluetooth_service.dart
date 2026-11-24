@@ -78,29 +78,3 @@ class BluetoothService {
     }
   }
 }
-
-/// Bluetooth de prueba para el modo demo: empieza apagado para poder ver la
-/// pantalla "Activa el Bluetooth", y se prende al tocar el botón.
-class FakeBluetoothService implements BluetoothService {
-  bool _on = false;
-
-  @override
-  Future<bool> isSupported() async => true;
-
-  @override
-  Future<bool> isOn() async => _on;
-
-  @override
-  Stream<bool> watchIsOn() => const Stream.empty();
-
-  @override
-  Future<void> turnOn() async {
-    _on = true;
-  }
-
-  @override
-  Future<SignalCapture?> searchClassSignal(String sessionId) async {
-    await Future.delayed(const Duration(seconds: 2));
-    return const SignalCapture(code: 'DEMO0000', rssi: -55);
-  }
-}

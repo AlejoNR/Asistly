@@ -7,8 +7,6 @@ import 'services/auth_repository.dart';
 import 'services/ble_advertiser.dart';
 import 'services/bluetooth_service.dart';
 import 'services/course_repository.dart';
-import 'services/fake_course_repository.dart';
-import 'services/fake_session_repository.dart';
 import 'services/permission_service.dart';
 import 'services/session_repository.dart';
 import 'theme/app_theme.dart';
@@ -25,7 +23,6 @@ import 'viewmodels/course_created_viewmodel.dart';
 import 'viewmodels/course_detail_viewmodel.dart';
 import 'viewmodels/course_report_viewmodel.dart';
 import 'viewmodels/course_students_viewmodel.dart';
-import 'viewmodels/demo_viewmodel.dart';
 import 'viewmodels/forgot_password_viewmodel.dart';
 import 'viewmodels/import_list_viewmodel.dart';
 import 'viewmodels/join_course_viewmodel.dart';
@@ -43,7 +40,6 @@ import 'viewmodels/student_history_viewmodel.dart';
 import 'viewmodels/student_main_viewmodel.dart';
 import 'viewmodels/verify_email_viewmodel.dart';
 import 'views/check_email_view.dart';
-import 'views/demo_view.dart';
 import 'views/forgot_password_view.dart';
 import 'views/login_view.dart';
 import 'views/register_view.dart';
@@ -82,14 +78,7 @@ void main() async {
 
 /// Registra lo que comparte toda la app: los repositorios (capa Modelo).
 class AppState extends StatelessWidget {
-  /// Pantalla con la que arranca la app: 'splash' normalmente, 'demo' en el modo demo.
-  final String initialRoute;
-
-  /// true en el modo demo: usa los repositorios de prueba (datos inventados en memoria)
-  /// en vez de Firestore.
-  final bool demo;
-
-  const AppState({super.key, this.initialRoute = 'splash', this.demo = false});
+  const AppState({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -99,24 +88,24 @@ class AppState extends StatelessWidget {
         // <CourseRepository>: las pantallas siempre piden un CourseRepository,
         // sin saber si es el real o el de prueba (los dos tienen los mismos métodos).
         Provider<CourseRepository>(
-          create: (_) => demo ? FakeCourseRepository() : CourseRepository(),
+          create: (_) => CourseRepository(),
         ),
         // El de sesiones usa el de cursos (para los estudiantes y el historial).
         Provider<SessionRepository>(
           create: (context) {
             final courses = Provider.of<CourseRepository>(context, listen: false);
-            return demo ? FakeSessionRepository(courses) : SessionRepository(courses);
+            return SessionRepository(courses);
           },
         ),
         Provider<BluetoothService>(
-          create: (_) => demo ? FakeBluetoothService() : BluetoothService(),
+          create: (_) => BluetoothService(),
         ),
         // Señal Bluetooth que emite el docente durante la clase.
         Provider<BleAdvertiser>(
-          create: (_) => demo ? FakeBleAdvertiser() : BleAdvertiser(),
+          create: (_) => BleAdvertiser(),
         ),
       ],
-      child: MyApp(initialRoute: initialRoute),
+      child: const MyApp(),
     );
   }
 }
@@ -124,8 +113,7 @@ class AppState extends StatelessWidget {
 /// Arquitectura MVVM: cada ruta crea su Vista junto con su ViewModel.
 /// El ViewModel recibe el repositorio y se destruye al salir de la pantalla.
 class MyApp extends StatelessWidget {
-  final String initialRoute;
-  const MyApp({super.key, this.initialRoute = 'splash'});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -135,7 +123,7 @@ class MyApp extends StatelessWidget {
       // Quita el efecto de Android 12+ que "estira" la pantalla al llegar al borde del scroll.
       scrollBehavior: const MaterialScrollBehavior().copyWith(overscroll: false),
       theme: AppTheme.light,
-      initialRoute: initialRoute,
+      initialRoute: 'splash',
       // Mientras se construyen las pantallas, las rutas que aún no existen
       // muestran "en construcción" en vez de cerrar la app con un error.
       onUnknownRoute: (settings) => MaterialPageRoute(
@@ -151,10 +139,6 @@ class MyApp extends StatelessWidget {
         'splash': (context) => ChangeNotifierProvider(
           create: (context) => SplashViewModel(_repo(context)),
           child: const SplashView(),
-        ),
-        'demo': (context) => ChangeNotifierProvider(
-          create: (context) => DemoViewModel(_repo(context)),
-          child: const DemoView(),
         ),
         'role': (context) => ChangeNotifierProvider(
           create: (context) => RoleViewModel(),
@@ -316,7 +300,7 @@ class MyApp extends StatelessWidget {
         'scan_qr': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as ScanQrArgs;
           return ChangeNotifierProvider(
-            create: (context) => ScanQrViewModel(_repo(context), _courses(context), _sessions(context), args),
+            create: (context) => ScanQrViewModel(_repo(context), _sessions(context), args),
             child: const ScanQrView(),
           );
         },

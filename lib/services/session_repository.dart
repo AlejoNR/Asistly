@@ -32,7 +32,6 @@ class SessionException implements Exception {
 /// - `sesiones/{id}/asistencias/{uid}`: una asistencia por estudiante.
 /// - `sesiones/{id}/reportesFalla/{uid}`: "Informar al docente".
 ///
-/// El modo demo usa [FakeSessionRepository], que tiene estos mismos métodos.
 class SessionRepository {
   final CourseRepository _courseRepo;
   SessionRepository(this._courseRepo);
