@@ -36,7 +36,7 @@ class _LoginViewState extends State<LoginView> {
     if (!_formKey.currentState!.validate()) return;
 
     final vm = Provider.of<LoginViewModel>(context, listen: false);
-    final route = await vm.login(_email.text, _password.text, role);
+    final route = await vm.login(Validators.fullInstitutionalEmail(_email.text), _password.text, role);
     if (!mounted || route == null) return;
     // Se borra el historial para que "atrás" no vuelva al login.
     Navigator.pushNamedAndRemoveUntil(context, route, (r) => false);
@@ -83,12 +83,13 @@ class _LoginViewState extends State<LoginView> {
                   AppTextField(
                     controller: _email,
                     label: 'Correo institucional',
-                    hint: 'ejemplo@udla.edu.co',
+                    hint: 'nombre.apellido',
+                    suffixText: '@udla.edu.co',
                     icon: Icons.alternate_email,
                     showRequiredMark: true,
                     keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.email],
-                    validator: Validators.institutionalEmail,
+                    autofillHints: const [AutofillHints.username],
+                    validator: Validators.institutionalEmailUser,
                     onChanged: (value) => vm.clearError(),
                   ),
                   const SizedBox(height: 16),
