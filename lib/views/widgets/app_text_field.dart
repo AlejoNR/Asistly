@@ -26,6 +26,7 @@ class AppTextField extends StatelessWidget {
     this.onChanged,
     this.onFieldSubmitted,
     this.enabled = true,
+    this.suffixText,
   });
 
   final String label;
@@ -49,6 +50,9 @@ class AppTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onFieldSubmitted;
   final bool enabled;
+
+  /// Texto fijo al final del campo, que no se escribe (ej. "@udla.edu.co").
+  final String? suffixText;
 
   @override
   Widget build(BuildContext context) {
@@ -97,6 +101,8 @@ class AppTextField extends StatelessWidget {
                   : fillColor,
             ),
             prefixIcon: Icon(icon, size: 20, color: iconColor),
+            suffixText: suffixText,
+            suffixStyle: AppText.bodyLg.copyWith(color: AppColors.onSurfaceVariant),
             suffixIcon: onToggleObscure == null
                 ? null
                 : IconButton(

@@ -49,7 +49,7 @@ class _RegisterViewState extends State<RegisterView> {
     final ok = await vm.register(
       fullName: _name.text,
       code: _code.text,
-      email: _email.text,
+      email: Validators.fullInstitutionalEmail(_email.text),
       password: _password.text,
     );
     if (!mounted || !ok) return;
@@ -111,11 +111,13 @@ class _RegisterViewState extends State<RegisterView> {
                   AppTextField(
                     controller: _email,
                     label: 'Correo institucional',
-                    hint: 'nombre.apellido@udla.edu.co',
+                    hint: 'nombre.apellido',
                     icon: Icons.mail_outline,
+                    // El dominio va fijo al final: solo se escribe lo que va antes del @.
+                    suffixText: '@udla.edu.co',
                     keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.email],
-                    validator: Validators.institutionalEmail,
+                    autofillHints: const [AutofillHints.username],
+                    validator: Validators.institutionalEmailUser,
                     labelColor: _labelColor,
                     iconColor: _iconColor,
                     radius: _radius,

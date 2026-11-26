@@ -38,4 +38,13 @@ void main() {
   test('maskEmail oculta el usuario', () {
     expect(maskEmail('usuario@udla.edu.co'), 'u***@udla.edu.co');
   });
+
+  test('registro: solo se escribe lo que va antes de @udla.edu.co', () {
+    expect(Validators.institutionalEmailUser('valeria.gomez'), null);
+    expect(Validators.institutionalEmailUser(''), isNotNull);
+    expect(Validators.institutionalEmailUser('valeria gomez'), isNotNull);
+    expect(Validators.fullInstitutionalEmail(' Valeria.Gomez '), 'valeria.gomez@udla.edu.co');
+    // Si pega el correo completo, no queda repetido el dominio.
+    expect(Validators.fullInstitutionalEmail('valeria.gomez@udla.edu.co'), 'valeria.gomez@udla.edu.co');
+  });
 }

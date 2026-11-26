@@ -25,6 +25,28 @@ class Validators {
     return null;
   }
 
+  /// Registro: solo se escribe lo que va antes de "@udla.edu.co".
+  static String? institutionalEmailUser(String? value) {
+    final user = emailUser(value ?? '');
+    if (user.isEmpty) return 'Ingresa tu correo institucional';
+    if (!RegExp(r'^[A-Za-z0-9._%+-]+$').hasMatch(user)) {
+      return 'Escribe solo lo que va antes de @${AppConfig.institutionalEmailDomains.first}';
+    }
+    return null;
+  }
+
+  /// Lo que va antes del @. Si pega el correo completo, se queda solo con esa parte.
+  static String emailUser(String text) {
+    final clean = text.trim();
+    final at = clean.indexOf('@');
+    return at < 0 ? clean : clean.substring(0, at);
+  }
+
+  /// Correo completo a partir de lo que escribió: "nombre" -> "nombre@udla.edu.co".
+  static String fullInstitutionalEmail(String text) {
+    return '${emailUser(text)}@${AppConfig.institutionalEmailDomains.first}'.toLowerCase();
+  }
+
   static String? loginPassword(String? value) {
     if (value == null || value.isEmpty) return 'Ingresa tu contraseña';
     return null;
