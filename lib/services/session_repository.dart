@@ -361,12 +361,9 @@ class SessionRepository {
       throw SessionException('Ese QR es de otra clase. Lee el que está mostrando tu docente.');
     }
 
-    // Se puede iniciar sesión desde cualquier celular, pero marcar solo desde el vinculado.
-    // Las reglas también lo exigen: esto es para explicar el motivo en vez de un rechazo general.
+    // Por ahora se puede marcar desde cualquier celular (pedido del usuario, 26 nov).
+    // Se guarda el id del celular con la asistencia, por si se quiere revisar después.
     final deviceId = await _deviceService.getDeviceId();
-    if (deviceId != user.deviceId) {
-      throw SessionException('Solo puedes marcar asistencia desde el celular vinculado a tu cuenta.');
-    }
 
     if (openClass.validateBluetooth && signal == null) {
       throw SessionException('Primero debes captar la señal Bluetooth de la clase.');

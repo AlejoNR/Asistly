@@ -146,7 +146,7 @@ service cloud.firestore {
         && d.keys().hasOnly(['estado', 'hora', 'metodo', 'qr', 'ble', 'rssi', 'deviceId', 'nombre', 'codigo'])
         && d.estado == 'presente'
         && d.hora == request.time
-        && d.deviceId == profile().deviceId
+        && d.deviceId is string // Se guarda, pero ya no tiene que ser el celular vinculado
         && d.nombre == profile().fullName
         && d.codigo == profile().code
         && (d.qr == t.qrActual || d.qr == t.qrAnterior)

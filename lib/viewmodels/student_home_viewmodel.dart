@@ -31,9 +31,6 @@ class StudentHomeViewModel extends BaseViewModel {
   List<OpenClass> openClasses = [];
   DateTime now = DateTime.now();
 
-  /// false si entró desde otro celular: puede ver todo, pero no marcar asistencia.
-  bool isLinkedDevice = true;
-
   Timer? _clock;
   StreamSubscription<List<OpenClass>>? _openClassesSub;
 
@@ -42,7 +39,6 @@ class StudentHomeViewModel extends BaseViewModel {
     error = null;
     notify();
     try {
-      isLinkedDevice = await _authRepo.isLinkedDevice();
       courses = await _courseRepo.getStudentCourses();
       _listenOpenClasses();
     } catch (e) {

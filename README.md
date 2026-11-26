@@ -22,13 +22,13 @@ Hecha con **Flutter** y **Firebase** (Authentication, Firestore, Cloud Functions
 - Registro e inicio de sesión solo con correo institucional (`@udla.edu.co`).
 - Verificación de correo y recuperación de contraseña con correos propios enviados desde Cloud Functions.
 - Cada cuenta de estudiante queda vinculada a un solo celular para evitar que alguien marque por otro.
-  > **Nota (pruebas):** por ahora está **desactivado el bloqueo al iniciar sesión**: se puede entrar con la misma cuenta desde cualquier celular para probar la app. Lo que sigue exigiendo el celular vinculado es **marcar asistencia** (en la app y en las reglas de Firestore); desde otro celular el botón de escanear aparece desactivado.
+  > **Nota (pruebas):** por ahora el celular vinculado **no se exige**: se puede iniciar sesión y **marcar asistencia desde cualquier celular**, para poder probar la app. Lo que sigue activo es que, al registrarse, un celular queda reservado para una sola cuenta de estudiante.
 
 ## ¿Cómo funciona la asistencia?
 
 1. Al abrir la sesión se genera un secreto. Cada 15 segundos se calcula un código nuevo con HMAC-SHA256 a partir de ese secreto (`lib/util/session_codes.dart`).
 2. El QR contiene el id de la sesión y el código vigente.
-3. Las reglas de Firestore (`firestore.rules`) comparan el código en el servidor (la app nunca lo puede leer) y solo aceptan el registro si está vigente, si llega dentro del tiempo de registro de la sesión y si viene del celular vinculado al estudiante.
+3. Las reglas de Firestore (`firestore.rules`) comparan el código en el servidor (la app nunca lo puede leer) y solo aceptan el registro si está vigente y si llega dentro del tiempo de registro de la sesión.
 
 4. Si el curso tiene activado **"Validar por Bluetooth"**, el celular del docente además emite una señal Bluetooth con otro código que también cambia cada 15 segundos (`lib/services/ble_advertiser.dart`). El estudiante tiene que captarla cerca del docente antes de leer el QR (`lib/services/bluetooth_service.dart`), y las reglas exigen los dos códigos. Así una foto del QR no sirve desde fuera del salón.
 

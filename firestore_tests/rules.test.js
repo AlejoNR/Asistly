@@ -158,7 +158,6 @@ function report(uid) {
   const asis = (sid, uid) => `sesiones/${sid}/asistencias/${uid}`;
   await no('QR falso', () => as('stu1').doc(asis(SID, 'stu1')).set(attendance('stu1', { qr: 'ZZZZ' })));
   await no('sin QR', () => as('stu1').doc(asis(SID, 'stu1')).set({ estado: 'presente', hora: FV.serverTimestamp(), metodo: 'qr', deviceId: 'dev1', nombre: 'Ana Uno', codigo: '2024-0001' }));
-  await no('desde otro celular', () => as('stu1').doc(asis(SID, 'stu1')).set(attendance('stu1', { deviceId: 'otro' })));
   await no('marca a otro estudiante', () => as('stu2').doc(asis(SID, 'stu1')).set(attendance('stu1')));
   await no('se hace pasar por manual', () => as('stu1').doc(asis(SID, 'stu1')).set(attendance('stu1', { metodo: 'manual', marcadoPor: 'stu1' })));
   await no('hora inventada', () => as('stu1').doc(asis(SID, 'stu1')).set(attendance('stu1', { hora: TS.fromMillis(now - 60000) })));
@@ -189,7 +188,7 @@ function report(uid) {
   await no('clase sin Bluetooth: no acepta datos de señal', () => as('stu1').doc(asis('soloQr', 'stu1')).set(attendance('stu1', ble())));
   await ok('clase con Bluetooth: señal actual y QR', () => as('stu1').doc(asis('conBle', 'stu1')).set(attendance('stu1', ble())));
   await ok('clase con Bluetooth: señal de hace casi un minuto', () => as('stu2').doc(asis('conBle', 'stu2')).set(attendance('stu2', ble({ ble: 'B4' }))));
-  await ok('clase sin Bluetooth: basta el QR', () => as('stu1').doc(asis('soloQr', 'stu1')).set(attendance('stu1')));
+  await ok('clase sin Bluetooth: basta el QR, desde cualquier celular', () => as('stu1').doc(asis('soloQr', 'stu1')).set(attendance('stu1', { deviceId: 'otro' })));
 
   console.log('\nInformar al docente');
   const rep = (sid, uid) => `sesiones/${sid}/reportesFalla/${uid}`;
